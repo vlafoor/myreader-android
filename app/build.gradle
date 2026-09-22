@@ -1,0 +1,23 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.myreader.app'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId 'com.myreader.app'
+        minSdk 26
+        targetSdk 36
+        versionCode 3
+        versionName '0.3.0'
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+}
