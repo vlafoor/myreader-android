@@ -67,6 +67,17 @@ jobs:
           sed -i -E 's/versionCode[[:space:]]+[0-9]+/versionCode 11/' app/build.gradle
           sed -i -E 's/versionName[[:space:]]+"[^"]+"/versionName "0.11.0"/' app/build.gradle
 
+
+      - name: Apply MyReader v0.12 overlay
+        shell: bash
+        run: |
+          cat .github/v12parts/part00 .github/v12parts/part01 .github/v12parts/part02 .github/v12parts/part03 .github/v12parts/part04 | base64 -d > /tmp/myreader-v12-overlay.zip
+          unzip -o /tmp/myreader-v12-overlay.zip -d .
+          python -c "import re; s=open('src/main/assets/index.html',encoding='utf-8').read(); m=re.search(r'<script>(.*)</script>',s,re.S); assert m; open('/tmp/myreader-v12.js','w',encoding='utf-8').write(m.group(1))"
+          node --check /tmp/myreader-v12.js
+          grep -q "versionCode 12" build.gradle
+          grep -q "0.12.0" build.gradle
+
       - name: Apply MyReader v0.12 patch
         shell: bash
         run: |
