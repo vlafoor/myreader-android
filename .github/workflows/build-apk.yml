@@ -55,6 +55,12 @@ jobs:
           python -c "import re; s=open('app/src/main/assets/index.html',encoding='utf-8').read(); m=re.search(r'<script>(.*)</script>',s,re.S); assert m; open('/tmp/myreader-v10.js','w',encoding='utf-8').write(m.group(1))"
           node --check /tmp/myreader-v10.js
 
+      - name: Inspect final reader action mode
+        shell: bash
+        run: |
+          echo "=== ReaderActionMode refs ==="
+          grep -n -C 8 -E "ReaderActionModeCallback|startActionMode|setCustomSelectionActionModeCallback" app/src/main/java/com/myreader/app/MainActivity.java || true
+
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
