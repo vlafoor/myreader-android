@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MyReader Prototype</title>
+<style>
+  :root{
+    --bg:#f3efe6;
+    --paper:#fbf7ee;
+    --ink:#27251f;
+    --muted:#7b756c;
+    --line:#ded7ca;
+    --accent:#655a46;
+    --card:#fffaf1;
+    --shadow:0 12px 35px rgba(55,45,28,.12);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background:linear-gradient(180deg,#ddd7cb,#f5f0e7);
+    color:var(--ink);
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    padding:24px;
+  }
+  .phone{
+    width:min(430px,100%);
+    height:850px;
+    background:var(--paper);
+    border-radius:34px;
+    overflow:hidden;
+    box-shadow:0 24px 70px rgba(0,0,0,.18);
+    border:1px solid rgba(0,0,0,.05);
+    position:relative;
+  }
+  .screen{
+    position:absolute; inset:0;
+    display:none;
+    background:var(--paper);
+  }
+  .screen.active{display:block}
+  .status{
+    height:34px;
+    padding:10px 18px 0;
+    display:flex; justify-content:space-between;
+    font-size:12px; color:var(--muted);
+  }
+  .header{
+    padding:12px 20px 14px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .title{
+    font-family:Georgia, "Times New Roman", serif;
+    font-size:29px; font-weight:700;
+    letter-spacing:-.5px;
+  }
+  .iconbtn{
+    border:0; background:transparent; width:40px; height:40px;
+    border-radius:14px; cursor:pointer; font-size:20px; color:var(--ink);
+  }
+  .iconbtn:hover{background:#eee7da}
+  .search{
+    margin:0 20px 12px;
+    border:1px solid var(--line);
+    background:#f7f2e8;
+    border-radius:16px;
+    padding:12px 14px;
+    display:flex; gap:10px; align-items:center;
+    color:var(--muted);
+    font-size:14px;
+  }
+  .chips{display:flex;gap:8px;overflow:auto;padding:0 20px 12px}
+  .chip{
+    border:1px solid var(--line); background:transparent; color:var(--muted);
+    padding:8px 12px;border-radius:999px;font-size:13px;white-space:nowrap;cursor:pointer;
+  }
+  .chip.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .section-title{padding:4px 20px 10px;font-size:13px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+  .continue{
+    margin:0 20px 16px;
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:22px;
+    padding:14px;
+    display:flex; gap:14px;
+    box-shadow:var(--shadow);
+    cursor:pointer;
+  }
+  .cover{
+    width:78px;height:112px;border-radius:8px;
+    background:linear-gradient(145deg,#b59c7d,#6b5a46);
+    color:#fff;display:flex;align-items:center;justify-content:center;
+    text-align:center;padding:8px;font-family:Georgia,serif;font-size:12px;line-height:1.25;
+    flex:0 0 auto;
+  }
+  .meta{flex:1;min-width:0}
+  .book-title{font-family:Georgia,serif;font-size:18px;font-weight:700;line-height:1.15;margin-top:3px}
+  .author{font-size:13px;color:var(--muted);margin-top:5px}
+  .progress{height:5px;background:#e8e0d4;border-radius:999px;margin-top:16px;overflow:hidden}
+  .progress > div{height:100%;background:var(--accent);width:42%}
+  .progress-txt{font-size:12px;color:var(--muted);margin-top:7px}
+  .grid{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:14px;
+    padding:0 20px 96px;
+    overflow:auto;height:430px;
+  }
+  .book-card{cursor:pointer}
+  .book-card .cover{width:100%;height:150px;margin-bottom:8px}
+  .small-title{font-family:Georgia,serif;font-size:13px;font-weight:700;line-height:1.2}
+  .small-author{font-size:11px;color:var(--muted);margin-top:3px}
+  .fab{
+    position:absolute;right:22px;bottom:80px;width:56px;height:56px;border-radius:50%;
+    border:0;background:var(--ink);color:white;font-size:26px;box-shadow:var(--shadow);cursor:pointer;
+  }
+  .bottom{
+    position:absolute;left:0;right:0;bottom:0;height:66px;
+    background:rgba(251,247,238,.96);backdrop-filter:blur(12px);
+    border-top:1px solid var(--line);
+    display:flex;justify-content:space-around;align-items:center;
+  }
+  .navitem{font-size:12px;color:var(--muted);text-align:center;cursor:pointer}
+  .navitem span{display:block;font-size:20px;margin-bottom:3px}
+  .navitem.active{color:var(--ink);font-weight:700}
+
+  /* Reader */
+  #reader{background:#f7f1e5}
+  .reader-top{
+    position:absolute;left:0;right:0;top:34px;height:52px;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 14px;z-index:5;
+  }
+  .reader-page{
+    height:100%;
+    padding:92px 34px 82px;
+    overflow:auto;
+    font-family:Georgia, "Times New Roman", serif;
+    font-size:20px;
+    line-height:1.78;
+    color:#2b2925;
+  }
+  .reader-page h2{font-size:26px;margin:0 0 26px;line-height:1.3}
+  .reader-page p{margin:0 0 1.2em}
+  .word{
+    border-bottom:1px dotted #8f8069;
+    cursor:pointer;
+    padding:0 1px;
+  }
+  .reader-foot{
+    position:absolute;left:0;right:0;bottom:0;
+    padding:12px 22px 18px;
+    display:flex;align-items:center;justify-content:space-between;
+    font-size:12px;color:var(--muted);
+    background:linear-gradient(180deg,rgba(247,241,229,0),#f7f1e5 35%);
+  }
+  .sheet{
+    position:absolute;left:14px;right:14px;bottom:14px;
+    background:#fffaf1;border:1px solid var(--line);border-radius:22px;
+    box-shadow:0 22px 60px rgba(0,0,0,.25);
+    padding:18px;z-index:20;display:none;
+  }
+  .sheet.show{display:block}
+  .grab{width:42px;height:4px;border-radius:999px;background:#d2c8b8;margin:-6px auto 14px}
+  .wordhead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+  .wordname{font:700 25px Georgia,serif}
+  .phon{font-size:12px;color:var(--muted);margin-top:4px}
+  .pos{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-top:12px}
+  .def{font:16px/1.5 Georgia,serif;margin-top:6px}
+  .indo{font-size:14px;margin-top:10px;padding:10px 12px;background:#f2ebdf;border-radius:12px}
+  .tabs{display:flex;gap:6px;margin-top:14px}
+  .tabbtn{flex:1;border:1px solid var(--line);background:transparent;padding:9px;border-radius:12px;cursor:pointer}
+  .tabbtn.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .actions{display:flex;justify-content:space-between;margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
+  .actions button{border:0;background:transparent;cursor:pointer;color:var(--accent);font-weight:700}
+
+  /* Settings sheet */
+  .settings{
+    position:absolute;left:14px;right:14px;bottom:14px;
+    background:#fffaf1;border:1px solid var(--line);border-radius:22px;
+    box-shadow:0 22px 60px rgba(0,0,0,.25);
+    padding:18px;z-index:21;display:none;
+  }
+  .settings.show{display:block}
+  .row{display:flex;align-items:center;justify-content:space-between;margin:14px 0}
+  .seg{display:flex;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .seg button{border:0;background:transparent;padding:9px 11px;cursor:pointer}
+  .seg button.active{background:var(--ink);color:#fff}
+  input[type="range"]{width:145px}
+
+  /* Import modal */
+  .overlay{
+    position:absolute;inset:0;background:rgba(26,23,19,.42);display:none;z-index:30;
+    align-items:flex-end;
+  }
+  .overlay.show{display:flex}
+  .modal{
+    width:100%;background:#fffaf1;border-radius:28px 28px 0 0;padding:18px 20px 28px;
+    box-shadow:0 -18px 50px rgba(0,0,0,.22);
+  }
+  .drop{
+    border:1.5px dashed #b6a995;border-radius:18px;padding:26px;text-align:center;
+    background:#f7f2e8;margin-top:12px;
+  }
+  .primary{
+    width:100%;border:0;border-radius:14px;background:var(--ink);color:white;
+    padding:13px 16px;font-weight:700;margin-top:14px;cursor:pointer;
+  }
+  .secondary{
+    width:100%;border:1px solid var(--line);border-radius:14px;background:transparent;
+    padding:12px 16px;font-weight:700;margin-top:8px;cursor:pointer;color:var(--ink);
+  }
+  .toast{
+    position:absolute;left:50%;transform:translateX(-50%);bottom:82px;
+    background:#2b2925;color:#fff;padding:10px 14px;border-radius:999px;
+    font-size:12px;z-index:50;display:none;
+  }
+  .toast.show{display:block}
+
+  /* Collections */
+  .collections-wrap{padding:0 20px 92px;height:690px;overflow:auto}
+  .collection-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .collection-card{border:1px solid var(--line);background:var(--card);border-radius:20px;padding:14px;cursor:pointer;min-height:160px}
+  .collection-card:hover{box-shadow:var(--shadow)}
+  .mini-stack{height:92px;position:relative;margin-bottom:12px}
+  .mini-book{position:absolute;width:58px;height:84px;border-radius:7px;border:1px solid rgba(255,255,255,.35);box-shadow:0 7px 14px rgba(0,0,0,.12)}
+  .mini-book:nth-child(1){left:6px;top:5px;transform:rotate(-7deg);background:linear-gradient(145deg,#a88870,#5f4e41)}
+  .mini-book:nth-child(2){left:42px;top:2px;transform:rotate(4deg);background:linear-gradient(145deg,#7d8c82,#364039)}
+  .mini-book:nth-child(3){left:76px;top:7px;transform:rotate(8deg);background:linear-gradient(145deg,#9a8ca8,#4d4557)}
+  .collection-name{font:700 17px Georgia,serif}
+  .collection-count{font-size:12px;color:var(--muted);margin-top:4px}
+  .collection-detail-list{padding:0 20px 96px;height:700px;overflow:auto}
+  .list-book{display:flex;gap:14px;padding:12px 0;border-bottom:1px solid var(--line);cursor:pointer}
+  .list-book .cover{width:66px;height:96px}
+  .list-book .meta{padding-top:4px}
+  .subtle{font-size:12px;color:var(--muted);margin-top:8px}
+  .top-actions{display:flex;gap:6px}
+  .empty-card{border:1px dashed var(--line);border-radius:18px;padding:24px 16px;text-align:center;color:var(--muted);margin-top:18px}
+  .small-fab{position:absolute;right:22px;bottom:82px;width:52px;height:52px;border-radius:50%;border:0;background:var(--ink);color:#fff;font-size:24px;box-shadow:var(--shadow);cursor:pointer}
+
+
+/* Notes / Settings / Filters / Annotation tools */
+.notes-wrap{padding:0 20px 96px;height:690px;overflow:auto}
+.note-card{border:1px solid var(--line);background:var(--card);border-radius:18px;padding:14px;margin-bottom:12px}
+.note-book{font:700 15px Georgia,serif}
+.note-meta{font-size:11px;color:var(--muted);margin-top:3px}
+.quote{font:15px/1.55 Georgia,serif;margin:12px 0;padding-left:12px;border-left:3px solid #b6a995}
+.note-text{font-size:13px;background:#f3ece0;border-radius:12px;padding:10px;margin-top:8px}
+.filterbar{display:flex;gap:8px;overflow:auto;padding:0 20px 12px}
+.filter-pill{border:1px solid var(--line);background:transparent;border-radius:999px;padding:8px 11px;font-size:12px;white-space:nowrap;cursor:pointer;color:var(--muted)}
+.filter-pill.active{background:var(--ink);color:white;border-color:var(--ink)}
+
+.settings-wrap{padding:0 20px 96px;height:720px;overflow:auto}
+.settings-group{margin-bottom:18px}
+.settings-group-title{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:0 2px 8px}
+.settings-card{border:1px solid var(--line);background:var(--card);border-radius:18px;overflow:hidden}
+.setting-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px;border-bottom:1px solid var(--line)}
+.setting-row:last-child{border-bottom:0}
+.setting-label{font-weight:700;font-size:14px}
+.setting-desc{font-size:11px;color:var(--muted);margin-top:3px}
+.toggle{width:44px;height:26px;border-radius:999px;background:#d8d0c3;position:relative;cursor:pointer;flex:0 0 auto}
+.toggle:after{content:"";width:20px;height:20px;border-radius:50%;background:white;position:absolute;top:3px;left:3px;box-shadow:0 2px 7px rgba(0,0,0,.2);transition:.15s}
+.toggle.on{background:var(--ink)}
+.toggle.on:after{left:21px}
+
+.collection-toolbar{display:flex;gap:8px;padding:0 20px 12px}
+.collection-toolbar .search{margin:0;flex:1}
+.filter-btn{border:1px solid var(--line);background:#f7f2e8;border-radius:16px;padding:0 14px;cursor:pointer;color:var(--ink)}
+.filter-panel{margin:0 20px 14px;border:1px solid var(--line);background:var(--card);border-radius:16px;padding:12px;display:none}
+.filter-panel.show{display:block}
+.filter-section{margin-bottom:10px}
+.filter-section:last-child{margin-bottom:0}
+.filter-label{font-size:11px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.06em;margin-bottom:7px}
+.filter-options{display:flex;gap:7px;flex-wrap:wrap}
+.filter-option{border:1px solid var(--line);background:transparent;border-radius:999px;padding:7px 10px;font-size:12px;cursor:pointer}
+.filter-option.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+.annotated-highlight{background:rgba(225,196,104,.45);border-radius:2px;padding:0 1px}
+.annotated-underline{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px;text-decoration-color:#7d6b4f}
+.annotated-both{background:rgba(225,196,104,.35);text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px;text-decoration-color:#7d6b4f}
+.annotation-row{display:flex;gap:8px;margin-top:12px}
+.annotation-btn{flex:1;border:1px solid var(--line);background:transparent;border-radius:12px;padding:9px 8px;font-weight:700;cursor:pointer}
+.annotation-btn.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+</style>
+
+<style id="selection-upgrade">
+  .selection-toolbar{
+    position:absolute;
+    left:50%;
+    transform:translateX(-50%);
+    bottom:84px;
+    z-index:60;
+    display:none;
+    gap:6px;
+    background:#fffaf1;
+    border:1px solid var(--line, #ddd6c9);
+    border-radius:14px;
+    padding:7px;
+    box-shadow:0 16px 40px rgba(0,0,0,.22);
+  }
+  .selection-toolbar.show{display:flex}
+  .selection-toolbar button{
+    border:0;
+    background:transparent;
+    padding:8px 10px;
+    border-radius:10px;
+    font-size:12px;
+    font-weight:700;
+    cursor:pointer;
+    color:var(--ink,#26231f);
+  }
+  .selection-toolbar button:hover{background:#eee7da}
+  .generic-sheet{
+    position:absolute;
+    left:14px; right:14px; bottom:14px;
+    z-index:70;
+    display:none;
+    background:#fffaf1;
+    border:1px solid var(--line,#ddd6c9);
+    border-radius:22px;
+    padding:18px;
+    box-shadow:0 22px 60px rgba(0,0,0,.28);
+  }
+  .generic-sheet.show{display:block}
+  .generic-selected{
+    font-family:Georgia,serif;
+    font-size:20px;
+    font-weight:700;
+    line-height:1.3;
+  }
+  .generic-sub{font-size:12px;color:var(--muted,#777);margin-top:5px}
+  .generic-body{
+    margin-top:14px;
+    padding:12px;
+    border-radius:12px;
+    background:#f2ebdf;
+    font-size:14px;
+    line-height:1.5;
+  }
+</style>
+
+
+<style id="v03-upgrade-style">
+  .saved-note-badge{display:inline-block;font-size:10px;padding:3px 7px;border-radius:999px;background:#eee6d8;color:#6d6253;margin-left:6px}
+  .reader-sync-hint{position:absolute;right:18px;bottom:16px;font-size:11px;color:var(--muted,#777)}
+  .dynamic-note-card{border-left:4px solid #8b7b60}
+</style>
+
+</head>
+<body>
+<div class="phone">
+  <!-- LIBRARY -->
+  <section id="library" class="screen active">
+    <div class="status"><span>09:41</span><span>● ● ●  87%</span></div>
+    <div class="header">
+      <div class="title">My Library</div>
+      <button class="iconbtn" onclick="openSettingsPage()">☁︎</button>
+    </div>
+    <div class="search">⌕ <span>Search title, author, or collection</span></div>
+    <div class="chips">
+      <button class="chip active">All</button>
+      <button class="chip">Reading</button>
+      <button class="chip">Finished</button>
+      <button class="chip">Collections</button>
+    </div>
+
+    <div class="section-title">Continue reading</div>
+    <div class="continue" onclick="openReader()">
+      <div class="cover">THE<br>SEVEN<br>HUSBANDS<br>OF EVELYN<br>HUGO</div>
+      <div class="meta">
+        <div class="book-title">The Seven Husbands of Evelyn Hugo</div>
+        <div class="author">Taylor Jenkins Reid</div>
+        <div class="progress"><div></div></div>
+        <div class="progress-txt">42% · 2h 18m left</div>
+      </div>
+    </div>
+
+    <div class="section-title">Your books</div>
+    <div class="grid" id="bookGrid">
+      <div class="book-card" onclick="openReader()">
+        <div class="cover" style="background:linear-gradient(145deg,#758078,#2f3b36)">BOOK<br>LOVERS</div>
+        <div class="small-title">Book Lovers</div><div class="small-author">Emily Henry</div>
+      </div>
+      <div class="book-card">
+        <div class="cover" style="background:linear-gradient(145deg,#c0a889,#695748)">NORMAL<br>PEOPLE</div>
+        <div class="small-title">Normal People</div><div class="small-author">Sally Rooney</div>
+      </div>
+      <div class="book-card">
+        <div class="cover" style="background:linear-gradient(145deg,#9a8da7,#51475c)">BEFORE<br>THE<br>COFFEE<br>GETS COLD</div>
+        <div class="small-title">Before the Coffee Gets Cold</div><div class="small-author">Toshikazu Kawaguchi</div>
+      </div>
+      <div class="book-card">
+        <div class="cover" style="background:linear-gradient(145deg,#b07c74,#69453f)">THE<br>SONG<br>OF ACHILLES</div>
+        <div class="small-title">The Song of Achilles</div><div class="small-author">Madeline Miller</div>
+      </div>
+      <div class="book-card">
+        <div class="cover" style="background:linear-gradient(145deg,#c8b57f,#7a693b)">YELLOWFACE</div>
+        <div class="small-title">Yellowface</div><div class="small-author">R.F. Kuang</div>
+      </div>
+      <div class="book-card">
+        <div class="cover" style="background:linear-gradient(145deg,#7f91a8,#3a4859)">THE<br>MIDNIGHT<br>LIBRARY</div>
+        <div class="small-title">The Midnight Library</div><div class="small-author">Matt Haig</div>
+      </div>
+    </div>
+
+    <button class="fab" onclick="openImport()">＋</button>
+    <div class="bottom">
+      <div class="navitem active"><span>▥</span>Library</div>
+      <div class="navitem" onclick="openCollections()"><span>▦</span>Collections</div>
+      <div class="navitem" onclick="openNotes()"><span>✎</span>Notes</div>
+      <div class="navitem" onclick="openSettingsPage()"><span>⚙</span>Settings</div>
+    </div>
+  </section>
+
+  <!-- READER -->
+  <section id="reader" class="screen">
+    <div class="status"><span>09:41</span><span>42%</span></div>
+    <div class="reader-top">
+      <button class="iconbtn" onclick="backLibrary()">←</button>
+      <div style="font-size:13px;color:var(--muted);max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+        The Seven Husbands of Evelyn Hugo
+      </div>
+      <div style="display:flex;gap:2px">
+        <button id="bookmarkBtn" class="iconbtn" onclick="toggleBookmark()" title="Bookmark">♡</button>
+        <button class="iconbtn" onclick="toggleSettings()">Aa</button>
+      </div>
+    </div>
+    <article class="reader-page" id="readerPage">
+      <h2>Chapter Seven</h2>
+      <p>
+        She had always been <span class="word" onclick="showWord('reluctant', this)">reluctant</span> to say what she truly wanted.
+        There was something <span class="word" onclick="showWord('elusive', this)">elusive</span> about certainty, as though naming it might make it disappear.
+      </p>
+      <p>
+        The room was quiet enough that she could hear the faint turn of a page from the chair beside her.
+        For a moment, she thought about all the things people keep because they are afraid to lose them.
+      </p>
+      <p>
+        Then she smiled, not because anything had become simple, but because the answer finally felt
+        <span class="word" onclick="showWord('inevitable', this)">inevitable</span>.
+      </p>
+    </article>
+    <div class="reader-foot">
+      <span>Chapter 7 of 29</span>
+      <span>Page 128</span>
+    </div>
+
+    <div id="dictSheet" class="sheet">
+      <div class="grab"></div>
+      <div class="wordhead">
+        <div>
+          <div class="wordname" id="dw">reluctant</div>
+          <div class="phon" id="dp">/rɪˈlʌk.tənt/</div>
+        </div>
+        <button class="iconbtn" style="width:34px;height:34px" onclick="closeDict()">×</button>
+      </div>
+      <div class="tabs">
+        <button class="tabbtn active" onclick="showDefinition(this)">Definition</button>
+        <button class="tabbtn" onclick="showTranslation(this)">Translate</button>
+      </div>
+      <div id="definitionPane">
+        <div class="pos">adjective</div>
+        <div class="def" id="dd">Unwilling and hesitant; not wanting to do something.</div>
+        <div class="indo" id="di"><b>Indonesia:</b> enggan; ragu-ragu</div>
+      </div>
+      <div id="translationPane" style="display:none">
+        <div class="pos">Selected sentence</div>
+        <div class="def">She had always been reluctant to say what she truly wanted.</div>
+        <div class="indo"><b>Terjemahan:</b> Dia selalu enggan mengatakan apa yang sebenarnya dia inginkan.</div>
+      </div>
+      <div class="annotation-row">
+        <button class="annotation-btn" onclick="applyAnnotation('highlight',this)">Highlight</button>
+        <button class="annotation-btn" onclick="applyAnnotation('underline',this)">Underline</button>
+        <button class="annotation-btn" onclick="applyAnnotation('both',this)">Both</button>
+      </div>
+      <div class="actions">
+        <button onclick="showToast('Note added')">Add note</button>
+        <button onclick="clearAnnotation()">Remove mark</button>
+        <button onclick="showToast('Copied')">Copy</button>
+      </div>
+    </div>
+
+    <div id="settingsSheet" class="settings">
+      <div class="grab"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <b>Reading appearance</b>
+        <button class="iconbtn" style="width:34px;height:34px" onclick="toggleSettings()">×</button>
+      </div>
+      <div class="row"><span>Font size</span><input id="fontRange" type="range" min="16" max="28" value="20" oninput="changeFont(this.value)"></div>
+      <div class="row">
+        <span>Theme</span>
+        <div class="seg">
+          <button class="active" onclick="setTheme('paper',this)">Paper</button>
+          <button onclick="setTheme('white',this)">White</button>
+          <button onclick="setTheme('night',this)">Night</button>
+        </div>
+      </div>
+      <div class="row">
+        <span>Page mode</span>
+        <div class="seg">
+          <button class="active">Page</button><button>Scroll</button>
+        </div>
+      </div>
+      <div class="row">
+        <span>E-Ink optimization</span>
+        <div class="seg"><button class="active">On</button><button>Off</button></div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- COLLECTIONS -->
+  <section id="collections" class="screen">
+    <div class="status"><span>09:41</span><span>● ● ●  87%</span></div>
+    <div class="header">
+      <div class="title">Collections</div>
+      <button class="iconbtn" onclick="showToast('Edit collection mode')">⋯</button>
+    </div>
+    <div class="collection-toolbar">
+      <div class="search" style="cursor:text"><span>⌕</span>
+        <input id="collectionSearch" oninput="filterCollections()" placeholder="Search collection or title"
+          style="border:0;outline:0;background:transparent;width:100%;font:inherit;color:var(--ink)">
+      </div>
+      <button class="filter-btn" onclick="toggleCollectionFilters()">☷</button>
+    </div>
+    <div id="collectionFilterPanel" class="filter-panel">
+      <div class="filter-section">
+        <div class="filter-label">Genre</div>
+        <div class="filter-options">
+          <button class="filter-option active" data-filter="genre" data-value="all" onclick="setCollectionFilter(this)">All</button>
+          <button class="filter-option" data-filter="genre" data-value="romance" onclick="setCollectionFilter(this)">Romance</button>
+          <button class="filter-option" data-filter="genre" data-value="fiction" onclick="setCollectionFilter(this)">Fiction</button>
+          <button class="filter-option" data-filter="genre" data-value="fantasy" onclick="setCollectionFilter(this)">Fantasy</button>
+          <button class="filter-option" data-filter="genre" data-value="nonfiction" onclick="setCollectionFilter(this)">Non-fiction</button>
+        </div>
+      </div>
+      <div class="filter-section">
+        <div class="filter-label">Status</div>
+        <div class="filter-options">
+          <button class="filter-option active" data-filter="status" data-value="all" onclick="setCollectionFilter(this)">All</button>
+          <button class="filter-option" data-filter="status" data-value="reading" onclick="setCollectionFilter(this)">Reading</button>
+          <button class="filter-option" data-filter="status" data-value="unread" onclick="setCollectionFilter(this)">Unread</button>
+          <button class="filter-option" data-filter="status" data-value="finished" onclick="setCollectionFilter(this)">Finished</button>
+        </div>
+      </div>
+    </div>
+    <div class="collections-wrap">
+      <div class="collection-grid">
+        <div class="collection-card" data-name="romance" data-genre="romance" data-status="reading" data-titles="the seven husbands of evelyn hugo book lovers normal people" onclick="openCollection('Romance',8)">
+          <div class="mini-stack"><div class="mini-book"></div><div class="mini-book"></div><div class="mini-book"></div></div>
+          <div class="collection-name">Romance</div><div class="collection-count">8 books</div>
+        </div>
+        <div class="collection-card" data-name="to read" data-genre="fiction fantasy romance" data-status="unread" data-titles="yellowface midnight library before the coffee gets cold" onclick="openCollection('To Read',12)">
+          <div class="mini-stack"><div class="mini-book"></div><div class="mini-book"></div><div class="mini-book"></div></div>
+          <div class="collection-name">To Read</div><div class="collection-count">12 books</div>
+        </div>
+        <div class="collection-card" data-name="favorites" data-genre="fiction romance" data-status="finished" data-titles="normal people song of achilles" onclick="openCollection('Favorites',5)">
+          <div class="mini-stack"><div class="mini-book"></div><div class="mini-book"></div><div class="mini-book"></div></div>
+          <div class="collection-name">Favorites</div><div class="collection-count">5 books</div>
+        </div>
+        <div class="collection-card" data-name="english practice" data-genre="fiction nonfiction" data-status="reading" data-titles="book lovers normal people" onclick="openCollection('English Practice',7)">
+          <div class="mini-stack"><div class="mini-book"></div><div class="mini-book"></div><div class="mini-book"></div></div>
+          <div class="collection-name">English Practice</div><div class="collection-count">7 books</div>
+        </div>
+      </div>
+      <div class="empty-card">Collections itu seperti folder/tag pribadi. Satu buku bisa masuk ke beberapa collection sekaligus.</div>
+    </div>
+    <button class="small-fab" onclick="createCollection()">＋</button>
+    <div class="bottom">
+      <div class="navitem" onclick="goLibrary()"><span>▥</span>Library</div>
+      <div class="navitem active"><span>▦</span>Collections</div>
+      <div class="navitem" onclick="openNotes()"><span>✎</span>Notes</div>
+      <div class="navitem" onclick="openSettingsPage()"><span>⚙</span>Settings</div>
+    </div>
+  </section>
+
+  <!-- COLLECTION DETAIL -->
+  <section id="collectionDetail" class="screen">
+    <div class="status"><span>09:41</span><span id="collectionCountTop">8 books</span></div>
+    <div class="header">
+      <button class="iconbtn" onclick="backCollections()">←</button>
+      <div style="flex:1;padding-left:8px">
+        <div class="title" id="collectionTitle" style="font-size:26px">Romance</div>
+        <div class="subtle" id="collectionSubtitle">8 books · sorted by recently added</div>
+      </div>
+      <div class="top-actions">
+        <button class="iconbtn" onclick="showToast('Sort: Recently added')">⇅</button>
+        <button class="iconbtn" onclick="showToast('Collection options')">⋯</button>
+      </div>
+    </div>
+    <div class="collection-detail-list">
+      <div class="list-book" onclick="openReader()">
+        <div class="cover">THE<br>SEVEN<br>HUSBANDS<br>OF EVELYN<br>HUGO</div>
+        <div class="meta">
+          <div class="book-title" style="font-size:17px">The Seven Husbands of Evelyn Hugo</div>
+          <div class="author">Taylor Jenkins Reid</div>
+          <div class="progress"><div style="width:42%"></div></div>
+          <div class="progress-txt">42% read</div>
+        </div>
+      </div>
+      <div class="list-book" onclick="openReader()">
+        <div class="cover" style="background:linear-gradient(145deg,#758078,#2f3b36)">BOOK<br>LOVERS</div>
+        <div class="meta">
+          <div class="book-title" style="font-size:17px">Book Lovers</div>
+          <div class="author">Emily Henry</div>
+          <div class="subtle">Not started</div>
+        </div>
+      </div>
+      <div class="list-book">
+        <div class="cover" style="background:linear-gradient(145deg,#c0a889,#695748)">NORMAL<br>PEOPLE</div>
+        <div class="meta">
+          <div class="book-title" style="font-size:17px">Normal People</div>
+          <div class="author">Sally Rooney</div>
+          <div class="subtle">Finished</div>
+        </div>
+      </div>
+      <div class="list-book">
+        <div class="cover" style="background:linear-gradient(145deg,#b07c74,#69453f)">THE<br>SONG<br>OF ACHILLES</div>
+        <div class="meta">
+          <div class="book-title" style="font-size:17px">The Song of Achilles</div>
+          <div class="author">Madeline Miller</div>
+          <div class="subtle">18% read</div>
+        </div>
+      </div>
+    </div>
+    <button class="small-fab" onclick="showToast('Add books to this collection')">＋</button>
+  </section>
+
+
+  <!-- NOTES -->
+  <section id="notesPage" class="screen">
+    <div class="status"><span>09:41</span><span>● ● ● 87%</span></div>
+    <div class="header">
+      <div class="title">Notes & Highlights</div>
+      <button class="iconbtn" onclick="showToast('Export notes: Markdown / TXT')">⇧</button>
+    </div>
+    <div class="search"><span>⌕</span><input placeholder="Search notes, quote, or book"
+      style="border:0;outline:0;background:transparent;width:100%;font:inherit;color:var(--ink)"></div>
+    <div class="filterbar">
+      <button class="filter-pill active">All</button>
+      <button class="filter-pill">Highlights</button>
+      <button class="filter-pill">Underlines</button>
+      <button class="filter-pill">Notes</button>
+      <button class="filter-pill">Bookmarks</button>
+    </div>
+    <div class="notes-wrap">
+      <div class="note-card">
+        <div class="note-book">The Seven Husbands of Evelyn Hugo</div>
+        <div class="note-meta">Chapter 7 · Page 128 · Highlight</div>
+        <div class="quote"><span class="annotated-highlight">She had always been reluctant to say what she truly wanted.</span></div>
+        <div class="note-text">Vocabulary: reluctant = enggan / ragu-ragu.</div>
+      </div>
+      <div class="note-card">
+        <div class="note-book">Book Lovers</div>
+        <div class="note-meta">Chapter 3 · Underline</div>
+        <div class="quote"><span class="annotated-underline">Sometimes the best stories begin where the plan ends.</span></div>
+      </div>
+      <div class="note-card">
+        <div class="note-book">Normal People</div>
+        <div class="note-meta">Page 76 · Note</div>
+        <div class="note-text">Balik lagi ke bagian ini nanti. Relasi karakternya mulai berubah.</div>
+      </div>
+    </div>
+    <div class="bottom">
+      <div class="navitem" onclick="goLibrary()"><span>▥</span>Library</div>
+      <div class="navitem" onclick="openCollections()"><span>▦</span>Collections</div>
+      <div class="navitem active"><span>✎</span>Notes</div>
+      <div class="navitem" onclick="openSettingsPage()"><span>⚙</span>Settings</div>
+    </div>
+  </section>
+
+  <!-- SETTINGS PAGE -->
+  <section id="settingsPage" class="screen">
+    <div class="status"><span>09:41</span><span>● ● ● 87%</span></div>
+    <div class="header">
+      <div class="title">Settings</div>
+      <button class="iconbtn" onclick="showToast('Settings saved locally')">✓</button>
+    </div>
+    <div class="settings-wrap">
+      <div class="settings-group">
+        <div class="settings-group-title">Reading</div>
+        <div class="settings-card">
+          <div class="setting-row"><div><div class="setting-label">Default theme</div><div class="setting-desc">Paper · warm ivory background</div></div><span>›</span></div>
+          <div class="setting-row"><div><div class="setting-label">Default font</div><div class="setting-desc">Georgia · 20 px</div></div><span>›</span></div>
+          <div class="setting-row"><div><div class="setting-label">E-Ink optimization</div><div class="setting-desc">Reduce animation and transparency</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <div class="settings-group-title">Dictionary & Translation</div>
+        <div class="settings-card">
+          <div class="setting-row"><div><div class="setting-label">Offline dictionary</div><div class="setting-desc">English definition + Indonesian meaning</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+          <div class="setting-row"><div><div class="setting-label">Offline translation</div><div class="setting-desc">English ⇄ Indonesian</div></div><span>›</span></div>
+          <div class="setting-row"><div><div class="setting-label">Long press action</div><div class="setting-desc">Dictionary + highlight/underline tools</div></div><span>›</span></div>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <div class="settings-group-title">Library & Import</div>
+        <div class="settings-card">
+          <div class="setting-row"><div><div class="setting-label">Import mode</div><div class="setting-desc">Copy book into app library</div></div><span>›</span></div>
+          <div class="setting-row"><div><div class="setting-label">Auto-read metadata</div><div class="setting-desc">Title, author, cover, genre when available</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+          <div class="setting-row"><div><div class="setting-label">Default sort</div><div class="setting-desc">Recently read</div></div><span>›</span></div>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <div class="settings-group-title">Sync mode</div>
+        <div class="settings-card">
+          <div class="setting-row" onclick="setSyncMode('local')"><div><div class="setting-label">Local Only</div><div class="setting-desc">Everything stays on this device</div></div><span id="localCheck">✓</span></div>
+          <div class="setting-row" onclick="setSyncMode('drive')"><div><div class="setting-label">Google Drive Sync</div><div class="setting-desc">Books + reading data across your devices</div></div><span id="driveCheck"></span></div>
+          <div class="setting-row" id="syncStatusRow" style="display:none"><div><div class="setting-label">Sync status</div><div class="setting-desc" id="syncStatusText">Drive mode selected · connection setup comes in Android build</div></div><span>☁</span></div>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <div class="settings-group-title">Storage & Backup</div>
+        <div class="settings-card">
+          <div class="setting-row"><div><div class="setting-label">Storage</div><div class="setting-desc">Books 1.8 GB · App data 240 MB</div></div><span>›</span></div>
+          <div class="setting-row" onclick="showToast('Backup file prepared')"><div><div class="setting-label">Export full backup</div><div class="setting-desc">Books, progress, notes, collections, settings</div></div><span>⇧</span></div>
+          <div class="setting-row" onclick="showToast('Choose a backup file')"><div><div class="setting-label">Restore backup</div><div class="setting-desc">Move everything to a new device</div></div><span>⇩</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="bottom">
+      <div class="navitem" onclick="goLibrary()"><span>▥</span>Library</div>
+      <div class="navitem" onclick="openCollections()"><span>▦</span>Collections</div>
+      <div class="navitem" onclick="openNotes()"><span>✎</span>Notes</div>
+      <div class="navitem active"><span>⚙</span>Settings</div>
+    </div>
+  </section>
+
+  <!-- IMPORT -->
+  <div id="importOverlay" class="overlay" onclick="overlayClose(event)">
+    <div class="modal">
+      <div class="grab"></div>
+      <div style="font:700 23px Georgia,serif">Import books</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:5px">EPUB, PDF, TXT, FB2, CBZ, MOBI*</div>
+      <div class="drop">
+        <div style="font-size:32px">⇩</div>
+        <b>Choose files</b>
+        <div style="font-size:12px;color:var(--muted);margin-top:6px">Bisa pilih banyak file sekaligus</div>
+      </div>
+      <input id="bookFileInput" type="file" multiple accept=".epub,.pdf,.txt,.html,.htm,.fb2,.cbz,.mobi" style="display:none"><button class="primary" onclick="chooseBooks()">Choose from device</button>
+      <button class="secondary" onclick="closeImport()">Cancel</button>
+    </div>
+  </div>
+
+
+  <div id="onboarding" class="overlay" style="display:none;align-items:center;padding:18px">
+    <div class="modal" style="border-radius:28px;padding:24px">
+      <div style="font:700 28px Georgia,serif">Welcome to MyReader</div>
+      <div style="color:var(--muted);font-size:14px;line-height:1.5;margin-top:8px">Choose how your library should be stored. You can change this anytime in Settings.</div>
+      <button class="primary" onclick="finishOnboarding('local')">Local Only</button>
+      <button class="secondary" onclick="finishOnboarding('drive')">Google Drive Sync</button>
+      <div style="font-size:11px;color:var(--muted);margin-top:12px">No MyReader account. Local mode works fully offline.</div>
+    </div>
+  </div>
+  <div id="toast" class="toast"></div>
+</div>
+
+<script>
+const words = {
+  reluctant:{phon:"/rɪˈlʌk.tənt/",def:"Unwilling and hesitant; not wanting to do something.",indo:"enggan; ragu-ragu"},
+  elusive:{phon:"/ɪˈluː.sɪv/",def:"Difficult to find, catch, achieve, or remember.",indo:"sulit ditemukan; sukar dipahami"},
+  inevitable:{phon:"/ɪˈnev.ɪ.tə.bəl/",def:"Certain to happen; unavoidable.",indo:"tak terelakkan; pasti terjadi"}
+};
+let activeWordElement=null, collectionGenre='all', collectionStatus='all', currentImportedBook=null;
+
+function hideAllScreens(){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'))}
+function goLibrary(){hideAllScreens();document.getElementById('library').classList.add('active')}
+function openCollections(){hideAllScreens();document.getElementById('collections').classList.add('active')}
+function backCollections(){openCollections()}
+function openNotes(){hideAllScreens();document.getElementById('notesPage').classList.add('active')}
+function openSettingsPage(){hideAllScreens();document.getElementById('settingsPage').classList.add('active');updateSyncUI()}
+function openCollection(name,count){
+  document.getElementById('collectionTitle').textContent=name;
+  document.getElementById('collectionCountTop').textContent=count+' books';
+  document.getElementById('collectionSubtitle').textContent=count+' books · sorted by recently added';
+  hideAllScreens();document.getElementById('collectionDetail').classList.add('active');
+}
+function createCollection(){const name=prompt('Nama collection baru:','Want to Read');if(name&&name.trim())showToast('Collection "'+name.trim()+'" dibuat')}
+function openReader(){hideAllScreens();document.getElementById('reader').classList.add('active')}
+function backLibrary(){closeDict();goLibrary()}
+
+function showWord(w,el){
+  activeWordElement=el||null; const x=words[w]; if(!x)return;
+  document.getElementById('dw').textContent=w;document.getElementById('dp').textContent=x.phon;
+  document.getElementById('dd').textContent=x.def;document.getElementById('di').innerHTML='<b>Indonesia:</b> '+x.indo;
+  document.getElementById('dictSheet').classList.add('show');document.getElementById('settingsSheet').classList.remove('show');
+}
+function closeDict(){document.getElementById('dictSheet').classList.remove('show')}
+function showDefinition(btn){document.querySelectorAll('.tabbtn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.getElementById('definitionPane').style.display='block';document.getElementById('translationPane').style.display='none'}
+function showTranslation(btn){document.querySelectorAll('.tabbtn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.getElementById('definitionPane').style.display='none';document.getElementById('translationPane').style.display='block'}
+function toggleSettings(){closeDict();document.getElementById('settingsSheet').classList.toggle('show')}
+function changeFont(v){document.getElementById('readerPage').style.fontSize=v+'px'}
+function setTheme(t,btn){
+  btn.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+  const r=document.getElementById('reader'),p=document.getElementById('readerPage');
+  if(t==='paper'){r.style.background='#f7f1e5';p.style.background='#f7f1e5';p.style.color='#2b2925'}
+  if(t==='white'){r.style.background='#fff';p.style.background='#fff';p.style.color='#222'}
+  if(t==='night'){r.style.background='#161616';p.style.background='#161616';p.style.color='#d7d2c8'}
+}
+
+function applyAnnotation(type,btn){
+  if(!activeWordElement)return;activeWordElement.classList.remove('annotated-highlight','annotated-underline','annotated-both');
+  activeWordElement.classList.add(type==='highlight'?'annotated-highlight':type==='underline'?'annotated-underline':'annotated-both');
+  document.querySelectorAll('.annotation-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');showToast(type==='highlight'?'Highlighted':type==='underline'?'Underlined':'Highlight + underline');
+}
+function clearAnnotation(){if(activeWordElement)activeWordElement.classList.remove('annotated-highlight','annotated-underline','annotated-both');document.querySelectorAll('.annotation-btn').forEach(b=>b.classList.remove('active'));showToast('Mark removed')}
+
+function toggleCollectionFilters(){document.getElementById('collectionFilterPanel').classList.toggle('show')}
+function setCollectionFilter(btn){
+  const kind=btn.dataset.filter,value=btn.dataset.value;document.querySelectorAll('.filter-option[data-filter="'+kind+'"]').forEach(x=>x.classList.remove('active'));btn.classList.add('active');
+  if(kind==='genre')collectionGenre=value;if(kind==='status')collectionStatus=value;filterCollections();
+}
+function filterCollections(){
+  const q=(document.getElementById('collectionSearch')?.value||'').toLowerCase().trim();
+  document.querySelectorAll('#collections .collection-card').forEach(card=>{
+    const hay=((card.dataset.name||'')+' '+(card.dataset.titles||'')).toLowerCase();
+    const genreOk=collectionGenre==='all'||(card.dataset.genre||'').includes(collectionGenre);const statusOk=collectionStatus==='all'||card.dataset.status===collectionStatus;
+    card.style.display=hay.includes(q)&&genreOk&&statusOk?'':'none';
+  });
+}
+
+function openImport(){document.getElementById('importOverlay').classList.add('show')}
+function closeImport(){document.getElementById('importOverlay').classList.remove('show')}
+function overlayClose(e){if(e.target.id==='importOverlay')closeImport()}
+function chooseBooks(){document.getElementById('bookFileInput').click()}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(window.tt);window.tt=setTimeout(()=>t.classList.remove('show'),1700)}
+
+// ---- Local library database (IndexedDB) ----
+function openDB(){return new Promise((resolve,reject)=>{const req=indexedDB.open('MyReaderDB',1);req.onupgradeneeded=e=>{const db=e.target.result;if(!db.objectStoreNames.contains('books'))db.createObjectStore('books',{keyPath:'id',autoIncrement:true})};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
+async function importFiles(files){
+  if(!files?.length)return;const db=await openDB();let done=0;
+  for(const file of files){await new Promise((resolve,reject)=>{const tx=db.transaction('books','readwrite');tx.objectStore('books').add({name:file.name,type:file.type,size:file.size,addedAt:Date.now(),blob:file});tx.oncomplete=()=>{done++;resolve()};tx.onerror=()=>reject(tx.error)})}
+  closeImport();await renderImportedBooks();showToast(done+' book'+(done>1?'s':'')+' imported');
+}
+async function getAllBooks(){const db=await openDB();return await new Promise((resolve,reject)=>{const r=db.transaction('books','readonly').objectStore('books').getAll();r.onsuccess=()=>resolve(r.result||[]);r.onerror=()=>reject(r.error)})}
+async function getBook(id){const db=await openDB();return await new Promise((resolve,reject)=>{const r=db.transaction('books','readonly').objectStore('books').get(Number(id));r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
+function cleanTitle(name){return name.replace(/\.(epub|pdf|txt|html?|fb2|cbz|mobi)$/i,'').replace(/[_-]+/g,' ').trim()}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+async function renderImportedBooks(){
+  const grid=document.getElementById('bookGrid'); if(!grid)return; grid.querySelectorAll('.imported-book').forEach(x=>x.remove()); const books=await getAllBooks();
+  for(const b of books.sort((a,b)=>b.addedAt-a.addedAt)){
+    const d=document.createElement('div');d.className='book-card imported-book';d.onclick=()=>openImportedBook(b.id);
+    d.innerHTML='<div class="cover" style="background:linear-gradient(145deg,#8f826f,#4d4438)">'+escapeHtml(cleanTitle(b.name).slice(0,24)).replace(/ /g,'<br>')+'</div><div class="small-title">'+escapeHtml(cleanTitle(b.name))+'</div><div class="small-author">Imported · '+escapeHtml((b.name.split('.').pop()||'file').toUpperCase())+'</div>';
+    grid.prepend(d);
+  }
+}
+async function openImportedBook(id){
+  const b=await getBook(id);if(!b)return;currentImportedBook=b;const ext=(b.name.split('.').pop()||'').toLowerCase();
+  if(ext==='txt'){const text=await b.blob.text();showImportedText(cleanTitle(b.name),'<p>'+escapeHtml(text).replace(/\n\n+/g,'</p><p>').replace(/\n/g,'<br>')+'</p>');return}
+  if(ext==='html'||ext==='htm'){const text=await b.blob.text();const doc=new DOMParser().parseFromString(text,'text/html');showImportedText(cleanTitle(b.name),doc.body?.innerHTML||escapeHtml(text));return}
+  if(ext==='epub'){try{await openEpub(b)}catch(e){console.error(e);showToast('EPUB tidak bisa dibuka di browser ini')}return}
+  if(ext==='pdf'){showToast('PDF sudah tersimpan · native PDF reader masuk tahap berikutnya');return}
+  showToast('File sudah tersimpan · reader format ini masuk tahap berikutnya');
+}
+function showImportedText(title,bodyHtml){
+  const page=document.getElementById('readerPage');page.innerHTML='<h2>'+escapeHtml(title)+'</h2>'+bodyHtml;document.querySelector('#reader .reader-top div').textContent=title;openReader();
+}
+
+// ---- Minimal EPUB reader: ZIP + OPF + first readable chapter ----
+async function inflateRaw(bytes){if(!('DecompressionStream' in window))throw new Error('No DecompressionStream');const ds=new DecompressionStream('deflate-raw');const stream=new Blob([bytes]).stream().pipeThrough(ds);return new Uint8Array(await new Response(stream).arrayBuffer())}
+function parseZip(buffer){
+  const u=new Uint8Array(buffer),v=new DataView(buffer);let eocd=-1;for(let i=u.length-22;i>=Math.max(0,u.length-65557);i--){if(v.getUint32(i,true)===0x06054b50){eocd=i;break}}if(eocd<0)throw new Error('Invalid ZIP');
+  const count=v.getUint16(eocd+10,true),cdOffset=v.getUint32(eocd+16,true),files=new Map();let p=cdOffset;const td=new TextDecoder('utf-8');
+  for(let i=0;i<count;i++){if(v.getUint32(p,true)!==0x02014b50)break;const method=v.getUint16(p+10,true),csize=v.getUint32(p+20,true),usize=v.getUint32(p+24,true),nl=v.getUint16(p+28,true),el=v.getUint16(p+30,true),cl=v.getUint16(p+32,true),lo=v.getUint32(p+42,true);const name=td.decode(u.slice(p+46,p+46+nl));files.set(name,{method,csize,usize,lo});p+=46+nl+el+cl}
+  return {u,v,files};
+}
+async function zipText(zip,name){
+  name=decodeURIComponent(name).replace(/^\.\//,'');const f=zip.files.get(name);if(!f)throw new Error('Missing '+name);const p=f.lo;if(zip.v.getUint32(p,true)!==0x04034b50)throw new Error('Bad local header');const nl=zip.v.getUint16(p+26,true),el=zip.v.getUint16(p+28,true),start=p+30+nl+el;let bytes=zip.u.slice(start,start+f.csize);if(f.method===8)bytes=await inflateRaw(bytes);else if(f.method!==0)throw new Error('Compression '+f.method);return new TextDecoder('utf-8').decode(bytes)}
+function joinPath(base,rel){if(/^\w+:/.test(rel)||rel.startsWith('/'))return rel;const parts=(base+rel).split('/'),out=[];for(const x of parts){if(x==='..')out.pop();else if(x!=='.'&&x!=='')out.push(x)}return out.join('/')}
+async function openEpub(book){
+  const zip=parseZip(await book.blob.arrayBuffer());const container=await zipText(zip,'META-INF/container.xml');const cdoc=new DOMParser().parseFromString(container,'application/xml');const opfPath=cdoc.querySelector('rootfile')?.getAttribute('full-path');if(!opfPath)throw new Error('No OPF');
+  const opf=await zipText(zip,opfPath);const odoc=new DOMParser().parseFromString(opf,'application/xml'),base=opfPath.includes('/')?opfPath.slice(0,opfPath.lastIndexOf('/')+1):'';const manifest={};odoc.querySelectorAll('manifest item').forEach(it=>manifest[it.getAttribute('id')]={href:it.getAttribute('href')||'',type:it.getAttribute('media-type')||''});const spine=[...odoc.querySelectorAll('spine itemref')].map(x=>x.getAttribute('idref'));
+  let chapter='';for(const id of spine){const item=manifest[id];if(!item)continue;const path=joinPath(base,item.href.split('#')[0]);try{chapter=await zipText(zip,path);if(chapter)break}catch(e){}}
+  if(!chapter)throw new Error('No chapter');const xdoc=new DOMParser().parseFromString(chapter,'text/html');xdoc.querySelectorAll('script,iframe,object').forEach(n=>n.remove());showImportedText(cleanTitle(book.name),xdoc.body?.innerHTML||escapeHtml(chapter));
+}
+
+// ---- Two storage modes ----
+function finishOnboarding(mode){localStorage.setItem('myreaderSyncMode',mode);document.getElementById('onboarding').style.display='none';updateSyncUI();if(mode==='drive')showToast('Drive mode selected')}
+function setSyncMode(mode){localStorage.setItem('myreaderSyncMode',mode);updateSyncUI();showToast(mode==='local'?'Local Only enabled':'Google Drive Sync selected')}
+function updateSyncUI(){const mode=localStorage.getItem('myreaderSyncMode')||'local';const lc=document.getElementById('localCheck'),dc=document.getElementById('driveCheck'),row=document.getElementById('syncStatusRow');if(lc)lc.textContent=mode==='local'?'✓':'';if(dc)dc.textContent=mode==='drive'?'✓':'';if(row)row.style.display=mode==='drive'?'flex':'none'}
+
+window.addEventListener('DOMContentLoaded',async()=>{
+  document.getElementById('bookFileInput')?.addEventListener('change',e=>importFiles([...e.target.files]));
+  document.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));c.classList.add('active')}));
+  document.querySelectorAll('#notesPage .filter-pill').forEach(c=>c.addEventListener('click',()=>{document.querySelectorAll('#notesPage .filter-pill').forEach(x=>x.classList.remove('active'));c.classList.add('active')}));
+  if(!localStorage.getItem('myreaderSyncMode'))document.getElementById('onboarding').style.display='flex';updateSyncUI();
+  try{await renderImportedBooks()}catch(e){console.warn(e)}
+});
+</script>
+
+<div id="selectionToolbar" class="selection-toolbar">
+  <button onclick="genericDictionary()">Definition</button>
+  <button onclick="genericTranslate()">Translate</button>
+  <button onclick="genericHighlight()">Highlight</button>
+  <button onclick="genericUnderline()">Underline</button>
+  <button onclick="genericNote()">Note</button>
+</div>
+
+<div id="genericSheet" class="generic-sheet">
+  <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start">
+    <div>
+      <div id="genericSelected" class="generic-selected"></div>
+      <div id="genericMode" class="generic-sub"></div>
+    </div>
+    <button onclick="closeGenericSheet()" style="border:0;background:transparent;font-size:24px;cursor:pointer">×</button>
+  </div>
+  <div id="genericBody" class="generic-body"></div>
+</div>
+
+
+<script id="selection-upgrade-js">
+let myReaderSelectedText = "";
+let myReaderSelectedRange = null;
+
+function captureReaderSelection(){
+  const sel = window.getSelection();
+  if(!sel || sel.rangeCount===0) return;
+  const txt = sel.toString().trim();
+  if(!txt){
+    document.getElementById('selectionToolbar')?.classList.remove('show');
+    return;
+  }
+  const range = sel.getRangeAt(0);
+  const reader = document.querySelector('.reader-page, #readerPage, article');
+  if(reader && reader.contains(range.commonAncestorContainer)){
+    myReaderSelectedText = txt;
+    myReaderSelectedRange = range.cloneRange();
+    document.getElementById('selectionToolbar')?.classList.add('show');
+  }
+}
+
+document.addEventListener('mouseup', ()=>setTimeout(captureReaderSelection, 30));
+document.addEventListener('touchend', ()=>setTimeout(captureReaderSelection, 120));
+
+function openGenericSheet(mode, body){
+  document.getElementById('genericSelected').textContent = myReaderSelectedText || 'No text selected';
+  document.getElementById('genericMode').textContent = mode;
+  document.getElementById('genericBody').innerHTML = body;
+  document.getElementById('genericSheet').classList.add('show');
+  document.getElementById('selectionToolbar').classList.remove('show');
+}
+function closeGenericSheet(){
+  document.getElementById('genericSheet').classList.remove('show');
+}
+
+function genericDictionary(){
+  const t = myReaderSelectedText.trim();
+  const isSingle = t && !/\s/.test(t);
+  if(!isSingle){
+    openGenericSheet('Dictionary', 'Untuk <b>definition</b>, pilih satu kata. Kalau memilih frasa/kalimat, gunakan Translate.');
+    return;
+  }
+  openGenericSheet('Dictionary', 'Prototype v0.2: pada app asli, kata <b>'+escapeHtml(t)+'</b> akan dicari otomatis di kamus offline bawaan aplikasi — bukan hanya kata yang sudah diprogram sebelumnya.');
+}
+function genericTranslate(){
+  const t = escapeHtml(myReaderSelectedText);
+  openGenericSheet('Translate', 'Prototype v0.2: teks yang kamu pilih akan diterjemahkan di sini.<br><br><b>Selected:</b> '+t+'<br><br><span style="color:#777">Di app asli, ini akan memakai engine translate offline EN ⇄ ID.</span>');
+}
+function genericHighlight(){
+  wrapSelection('annotated-highlight');
+}
+function genericUnderline(){
+  wrapSelection('annotated-underline');
+}
+function genericNote(){
+  openGenericSheet('Add note', 'Catatan akan ditempel ke teks yang dipilih:<br><br><b>'+escapeHtml(myReaderSelectedText)+'</b>');
+}
+function wrapSelection(cls){
+  if(!myReaderSelectedRange) return;
+  try{
+    const span=document.createElement('span');
+    span.className=cls;
+    myReaderSelectedRange.surroundContents(span);
+    window.getSelection()?.removeAllRanges();
+    document.getElementById('selectionToolbar').classList.remove('show');
+    if(typeof showToast==='function') showToast(cls.includes('underline')?'Underlined':'Highlighted');
+  }catch(e){
+    openGenericSheet('Selection', 'Prototype browser ini belum bisa memberi mark pada selection yang melintasi beberapa elemen HTML. Di app Android aslinya, selection multi-kata tetap akan didukung.');
+  }
+}
+function escapeHtml(s){
+  return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+}
+</script>
+
+
+<script id="v03-upgrade-js">
+/* MyReader v0.3 — local persistence for reading position, annotations, notes, bookmarks */
+let currentBookKey = "sample:evelyn";
+let currentBookTitle = "The Seven Husbands of Evelyn Hugo";
+let selectedOffsets = null;
+let restoreTimer = null;
+
+function storageJSON(key, fallback){
