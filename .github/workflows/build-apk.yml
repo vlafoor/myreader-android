@@ -41,6 +41,10 @@ jobs:
         run: |
           echo 'H4sICJxmsmoAA3BhdGNoX3YwOC5weQCtVW1vm0gQ/u5fMep9ACQbHLfnRlg+yXlparV1quCkOqmStcACewF2tbvYWLn8985iHGP35XS6syXE7rw/88yQSF6AIDrLWQisEFxq+IzHXu83WBDN1hRmZSw5iyFhtQ+PlApQW6VpASGRCnilFYsp6IzCFxo+MLpx4YpDyTX6jbv3wLSiedJH1yGNSKUoKF4cAuzVworlsYKIlLBmqiJ5vgWeJIpqiHipaalhw3SGkaEgOspYmULGNGiqNL67PTE1JdgWEcJTMvIKwkrvL7ImXsQLr9hKSmIqPSP+hKJZhHUyvXWNiuX01FS4RmWlaa1tc1Z4FjmJqG21GJFdzu7a1PuFlTHfzEvMUE2+llbfsk6soP1tWoRQ8x2iETRA7syVrWVFncYeLOvFxPPggwF9j9I/gA+sRDkCzxODf2zA+b4H7tey4/9zq0detBIuQWmiKzXAQMYnltZ0pCCPu3iCpBRiSUxE4CVemFJhk7GcHnnH1gza1oAmQhl9gvTIqES7YwrEdM0iqjrpsQTsC0MI9+H6LpjfLtzg6sNqvljCH1M4Eqwub6+uA/fOgaeDufmlVO8gth0D/BWNuPw5+nur58PriYOgAeaCyEuec2k3T1emoT36/awPozdv8fH63Ok6O/GwIGuW4nTx8l95Ycj8XfvvGUyhYVLwZ7C8/rS6n6/efZzdrD7Ob94vV8FytrwPVhezu8l/QPL2OyRfgv/9q+iL2cP8ZrY0jo4z+AmkadsT47FFuI3zwBQLWY6zae9DNwNi5ku4G8k03Q2pcszCup8b0m5Vw09FkFdEwXrojidINFwiSHPcIAWSW5MwRxrzKsqQkzI17MaRRqmUNEKUBYmaVZL9aJUQZcbBw/xp7Wa6yDGdepodLY16Wh/GP6y05uVTVEnFpS84NpLKZzPnP5RMClYOMsrSTPuvx6KeDHBvPJoxImKQ4XVuRIPIUMZHyhB72Dd/dzh2nq2T2K7mAmf4Kclp7Q9hCKTSfNKuBn/0RtQwGuLjbISBTEq/NjgbHxucRtvtVsyexAcPY6MaM4VKW9/cTgiWUA6wf4XyI9oUnRLhn6HjQ6hRGwXO96n9n96HR96dXtYlVI2ECju9b75JbipJnFPU1dOw2+1D/WsqFY71JcetPMYPQfd8bh0UX7WChWGphRR1h9ar/untubl1emE3M+30vgGRMlXOtQcAAA==' | base64 -d | gzip -d > /tmp/patch_v08.py
           python /tmp/patch_v08.py
+          # v0.9: fix the actual cause of all dead buttons: a JavaScript syntax error left by pagination patch
+          sed -i 's/let scrollTimer;scrollTimer=setTimeout(saveTextProgress,180);updateReaderProgress()});/let scrollTimer;/' app/src/main/assets/index.html
+          python -c "import re; s=open('app/src/main/assets/index.html',encoding='utf-8').read(); m=re.search(r'<script>(.*)</script>',s,re.S); assert m; open('/tmp/myreader-app.js','w',encoding='utf-8').write(m.group(1))"
+          node --check /tmp/myreader-app.js
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
@@ -63,11 +67,11 @@ jobs:
         run: gradle :app:assembleDebug --stacktrace
 
       - name: Copy APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk MyReader-v0.8-debug.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk MyReader-v0.9-debug.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MyReader-v0.8-APK
-          path: MyReader-v0.8-debug.apk
+          name: MyReader-v0.9-APK
+          path: MyReader-v0.9-debug.apk
           retention-days: 30
