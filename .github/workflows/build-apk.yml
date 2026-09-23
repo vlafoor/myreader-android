@@ -157,7 +157,7 @@ jobs:
         shell: bash
         run: |
           cat .github/importfix/part00 .github/importfix/part01 | base64 -d | gzip -d > /tmp/importfix.patch
-          (cd app && patch -p3 < /tmp/importfix.patch)
+          (cd app && patch -p4 < /tmp/importfix.patch)
           python -c "import re; s=open('app/src/main/assets/index.html',encoding='utf-8').read(); m=re.search(r'<script>(.*)</script>',s,re.S); assert m; open('/tmp/myreader-importfix.js','w',encoding='utf-8').write(m.group(1))"
           node --check /tmp/myreader-importfix.js
           grep -q "versionCode 19" app/build.gradle
