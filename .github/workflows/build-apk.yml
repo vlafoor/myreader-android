@@ -99,10 +99,21 @@ jobs:
           grep -q "versionCode 14" app/build.gradle
           grep -q "0.14.0" app/build.gradle
 
-      - name: Upload final v0.14 source
+      - name: Apply MyReader v0.15 UI patch
+        shell: bash
+        run: |
+          base64 -d .github/v15patch.b64 | gzip -d > /tmp/patch_v15.py
+          sed -i "s#root=Path('/mnt/data/v14src')#root=Path('app')#" /tmp/patch_v15.py
+          python /tmp/patch_v15.py
+          python -c "import re; s=open('app/src/main/assets/index.html',encoding='utf-8').read(); m=re.search(r'<script>(.*)</script>',s,re.S); assert m; open('/tmp/myreader-v15.js','w',encoding='utf-8').write(m.group(1))"
+          node --check /tmp/myreader-v15.js
+          grep -q "versionCode 15" app/build.gradle
+          grep -q "0.15.0" app/build.gradle
+
+      - name: Upload final v0.15 source
         uses: actions/upload-artifact@v4
         with:
-          name: MyReader-v0.14-Source
+          name: MyReader-v0.15-Source
           path: |
             app/src/main/assets/index.html
             app/src/main/assets/pdf.min.js
@@ -135,11 +146,11 @@ jobs:
         run: gradle :app:assembleDebug --stacktrace
 
       - name: Copy APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk MyReader-v0.14-debug.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk MyReader-v0.15-debug.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MyReader-v0.14-APK
-          path: MyReader-v0.14-debug.apk
+          name: MyReader-v0.15-APK
+          path: MyReader-v0.15-debug.apk
           retention-days: 30
