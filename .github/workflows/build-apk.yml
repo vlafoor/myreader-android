@@ -131,6 +131,28 @@ jobs:
           grep -q "versionCode 17" app/build.gradle
           grep -q "versionName '0.2'" app/build.gradle
 
+      - name: Apply EPUB compatibility and PDF conversion patch
+        shell: bash
+        run: |
+          cat .github/epubfix/part00 .github/epubfix/part01 .github/epubfix/part02 .github/epubfix/part03 .github/epubfix/part04 | base64 -d | gzip -d > /tmp/epub_pdf_fix.patch
+          (cd app && patch -p4 < /tmp/epub_pdf_fix.patch)
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('app/src/main/assets/index.html')
+          s=p.read_text(encoding='utf-8')
+          old="const html=out.join('\\n');return {html,chars:stripMarkup(html).length,heading}"
+          new="const html=out.join('\\n');const chars=html.replace(/<[^>]+>/g,' ').replace(/&[^;]+;/g,' ').replace(/\\s+/g,' ').trim().length;return {html,chars,heading}"
+          if old in s:
+              s=s.replace(old,new)
+          p.write_text(s,encoding='utf-8')
+          PY
+          python -c "import re; s=open('app/src/main/assets/index.html',encoding='utf-8').read(); m=re.search(r'<script>(.*)</script>',s,re.S); assert m; open('/tmp/myreader-epubfix.js','w',encoding='utf-8').write(m.group(1))"
+          node --check /tmp/myreader-epubfix.js
+          grep -q "versionCode 18" app/build.gradle
+          grep -q "versionName '0.2'" app/build.gradle
+          grep -q "getEpubPackage" app/src/main/java/com/myreader/app/MainActivity.java
+          grep -q "Convert PDF to EPUB" app/src/main/assets/index.html
+
       - name: Upload final v0.2 source
         uses: actions/upload-artifact@v4
         with:
