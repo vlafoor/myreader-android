@@ -236,7 +236,7 @@ jobs:
           cp app/build/outputs/apk/debug/app-debug.apk MyReader-v0.2.14-gdrive-sync.apk
           $ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner verify --print-certs MyReader-v0.2.14-gdrive-sync.apk > signing.txt
           cat signing.txt
-          grep -q "B5:E6:7F:14:E8:E6:E7:EE:75:93:CC:1A:18:E6:97:2D:FA:C7:05:8C" signing.txt
+          grep -qi "b5e67f14e8e6e7ee7593cc1a18e6972dfac7058c" signing.txt
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
