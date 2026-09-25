@@ -166,6 +166,17 @@ jobs:
           grep -q "getPickedMetadata2" app/src/main/java/com/myreader/app/MainActivity.java
           grep -q "detectNativeFileType" app/src/main/java/com/myreader/app/MainActivity.java
 
+      - name: Apply Google Drive OAuth and sync patch
+        shell: bash
+        run: |
+          python .github/patch_gdrive_v0212.py
+          python -c "import re; s=open('app/src/main/assets/index.html',encoding='utf-8').read(); m=re.search(r'<script>(.*)</script>',s,re.S); assert m; open('/tmp/myreader-gdrive.js','w',encoding='utf-8').write(m.group(1))"
+          node --check /tmp/myreader-gdrive.js
+          grep -q "versionCode 20" app/build.gradle
+          grep -q "0.2.12" app/build.gradle
+          grep -q "DriveSyncBridge" app/src/main/java/com/myreader/app/MainActivity.java
+          grep -q "googleDriveSyncSettings" app/src/main/assets/index.html
+
       - name: Upload final v0.2 source
         uses: actions/upload-artifact@v4
         with:
@@ -201,12 +212,17 @@ jobs:
       - name: Build debug APK
         run: gradle :app:assembleDebug --stacktrace
 
-      - name: Copy APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk MyReader-v0.2-debug.apk
+      - name: Copy APK and signing fingerprint
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk MyReader-v0.2.12-gdrive-debug.apk
+          $ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner verify --print-certs MyReader-v0.2.12-gdrive-debug.apk > signing.txt
+          cat signing.txt
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MyReader-v0.2-APK
-          path: MyReader-v0.2-debug.apk
+          name: MyReader-v0.2.12-GDrive-APK
+          path: |
+            MyReader-v0.2.12-gdrive-debug.apk
+            signing.txt
           retention-days: 30
