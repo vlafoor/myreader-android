@@ -194,6 +194,115 @@ jobs:
           grep -q "DriveSyncBridge" app/src/main/java/com/myreader/app/MainActivity.java
           grep -q "drive-sync.js" app/src/main/assets/index.html
 
+      - name: Apply MyReader v0.2.15 latest UI and auth fix
+        shell: bash
+        run: |
+          cat .github/v0215/chunk00 .github/v0215/chunk01 .github/v0215/chunk02 .github/v0215/chunk03 .github/v0215/chunk04 .github/v0215/chunk05 .github/v0215/chunk06 .github/v0215/chunk07 | base64 -d > /tmp/v0215-overlay.zip
+          echo "e18598ec0f71894b8fdaf7af0a9290fdcba6d41a352bd7ebd259a2cfa9d86bce  /tmp/v0215-overlay.zip" | sha256sum -c -
+          unzip -o /tmp/v0215-overlay.zip -d app
+
+          python - <<'PY'
+          from pathlib import Path
+          import re, hashlib
+
+          # Keep the exact v0.2.10 UI logic that was already working.
+          html = Path('app/src/main/assets/index.html')
+          h = html.read_text(encoding='utf-8')
+          blocks=[]
+          for m in re.finditer(r'<script([^>]*)>([\s\S]*?)</script>', h):
+              if 'src=' not in m.group(1) and m.group(2).strip():
+                  blocks.append(m.group(2))
+          main=max(blocks,key=len)
+          digest=hashlib.sha256(main.encode()).hexdigest()
+          print('V0215_MAIN_JS_SHA256='+digest)
+          assert digest == '5d2805c170d56d10dbcc8765ff45f3ec57c552da8fa540fc935ecbb02acb2970', 'Main UI JS changed from working v0.2.10 baseline'
+          Path('/tmp/myreader-main-v0215.js').write_text(main, encoding='utf-8')
+
+          # Basic contract checks for the newer UI and its important actions.
+          required_html = [
+              'Reading appearance',
+              'PDF & Comics',
+              'Library & Storage',
+              'googleDriveSyncSettings',
+              'drive-sync.js',
+              'drive-sync.css'
+          ]
+          for marker in required_html:
+              assert marker in h, f'Missing UI marker: {marker}'
+
+          required_functions = [
+              'openScreen','chooseBooks','openBook','closeReader',
+              'createCollection','commitNote','deleteBook',
+              'openReadingSettingsPreview','cyclePdfViewMode'
+          ]
+          for fn in required_functions:
+              assert re.search(r'(?:async\s+)?function\s+' + re.escape(fn) + r'\s*\(', main), f'Missing function: {fn}'
+
+          java = Path('app/src/main/java/com/myreader/app/MainActivity.java')
+          j = java.read_text(encoding='utf-8')
+          if 'import com.google.android.gms.common.api.ApiException;' not in j:
+              j = j.replace(
+                  'import com.google.android.gms.common.api.Scope;',
+                  'import com.google.android.gms.common.api.Scope;\nimport com.google.android.gms.common.api.ApiException;'
+              )
+
+          old_request = '''return AuthorizationRequest.builder()
+                  .setRequestedScopes(Arrays.asList(
+                          new Scope(DRIVE_APPDATA_SCOPE),
+                          new Scope(DRIVE_FILE_SCOPE)))
+                  .build();'''
+          new_request = '''return AuthorizationRequest.builder()
+                  .setRequestedScopes(Arrays.asList(
+                          new Scope(DRIVE_APPDATA_SCOPE)))
+                  .build();'''
+          assert old_request in j, 'Drive scope block not found'
+          j = j.replace(old_request, new_request, 1)
+
+          old_result = '''if (requestCode == DRIVE_AUTH_REQUEST) {
+              if (resultCode == RESULT_OK && data != null) {
+                  try { acceptDriveAuthorization(driveAuthorizationClient.getAuthorizationResultFromIntent(data)); }
+                  catch (Exception e) { notifyDriveAuth(false, "Google Drive authorization failed: " + e.getMessage()); }
+              } else notifyDriveAuth(false, "Google Drive connection cancelled");
+              return;
+          }'''
+          new_result = '''if (requestCode == DRIVE_AUTH_REQUEST) {
+              if (data != null) {
+                  try {
+                      acceptDriveAuthorization(driveAuthorizationClient.getAuthorizationResultFromIntent(data));
+                  } catch (ApiException e) {
+                      notifyDriveAuth(false, "Google Drive authorization failed (" + e.getStatusCode() + "): " +
+                              (e.getMessage() == null ? "OAuth configuration or consent error" : e.getMessage()));
+                  } catch (Exception e) {
+                      notifyDriveAuth(false, "Google Drive authorization failed: " + e.getMessage());
+                  }
+              } else if (resultCode == RESULT_CANCELED) {
+                  notifyDriveAuth(false, "Google Drive authorization was cancelled");
+              } else {
+                  notifyDriveAuth(false, "Google Drive authorization did not return a result");
+              }
+              return;
+          }'''
+          assert old_result in j, 'Drive result block not found'
+          j = j.replace(old_result, new_result, 1)
+          j = re.sub(r'int currentVersion = \d+;', 'int currentVersion = 23;', j, count=1)
+          java.write_text(j, encoding='utf-8')
+
+          gradle = Path('app/build.gradle')
+          g = gradle.read_text(encoding='utf-8')
+          g = re.sub(r'versionCode\s+\d+', 'versionCode 23', g)
+          g = re.sub(r"versionName\s+['\"][^'\"]+['\"]", "versionName '0.2.15'", g)
+          gradle.write_text(g, encoding='utf-8')
+          PY
+
+          node --check /tmp/myreader-main-v0215.js
+          node --check app/src/main/assets/drive-sync.js
+          grep -q "versionCode 23" app/build.gradle
+          grep -q "versionName '0.2.15'" app/build.gradle
+          grep -q "ApiException" app/src/main/java/com/myreader/app/MainActivity.java
+          grep -q "new Scope(DRIVE_APPDATA_SCOPE)" app/src/main/java/com/myreader/app/MainActivity.java
+          ! grep -A5 "driveAuthorizationRequest" app/src/main/java/com/myreader/app/MainActivity.java | grep -q "new Scope(DRIVE_FILE_SCOPE)"
+          grep -q "Google Drive authorization failed (" app/src/main/java/com/myreader/app/MainActivity.java
+
       - name: Upload final v0.2 source
         uses: actions/upload-artifact@v4
         with:
@@ -233,16 +342,16 @@ jobs:
 
       - name: Copy APK and signing fingerprint
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk MyReader-v0.2.14-gdrive-sync.apk
-          $ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner verify --print-certs MyReader-v0.2.14-gdrive-sync.apk > signing.txt
+          cp app/build/outputs/apk/debug/app-debug.apk MyReader-v0.2.15-latest-ui-gdrive.apk
+          $ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner verify --print-certs MyReader-v0.2.15-latest-ui-gdrive.apk > signing.txt
           cat signing.txt
           grep -qi "b5e67f14e8e6e7ee7593cc1a18e6972dfac7058c" signing.txt
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MyReader-v0.2.14-GDrive-Sync
+          name: MyReader-v0.2.15-Latest-UI-GDrive
           path: |
-            MyReader-v0.2.14-gdrive-sync.apk
+            MyReader-v0.2.15-latest-ui-gdrive.apk
             signing.txt
           retention-days: 30
