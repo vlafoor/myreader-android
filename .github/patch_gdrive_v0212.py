@@ -9,8 +9,8 @@ gradlep=root/'build.gradle'
 g=gradlep.read_text(encoding='utf-8')
 if 'play-services-auth' not in g:
     g += "\n\ndependencies {\n    implementation 'com.google.android.gms:play-services-auth:21.5.0'\n}\n"
-g=re.sub(r'versionCode\s+\d+', 'versionCode 20', g)
-g=re.sub(r"versionName\s+['\"][^'\"]+['\"]", "versionName '0.2.12'", g)
+g=re.sub(r'versionCode\s+\d+', 'versionCode 21', g)
+g=re.sub(r"versionName\s+['\"][^'\"]+['\"]", "versionName '0.2.13'", g)
 gradlep.write_text(g,encoding='utf-8')
 
 j=javap.read_text(encoding='utf-8')
@@ -57,11 +57,11 @@ if 'private class DriveSyncBridge' not in j:
 javap.write_text(j,encoding='utf-8')
 
 s=htmlp.read_text(encoding='utf-8')
-css='''\n<style id="gdrive-sync-v0212">\n.drive-sync-card{border:1px solid var(--line);background:var(--card);border-radius:16px;overflow:hidden;margin:0 0 14px}.drive-sync-row{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line)}.drive-sync-row:last-child{border-bottom:0}.drive-sync-copy{flex:1;min-width:0}.drive-sync-copy b{display:block;font-size:12px}.drive-sync-copy small{display:block;font-size:10px;color:var(--muted);margin-top:3px}.drive-sync-btn{border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:9px;padding:8px 10px;font-size:10px;font-weight:800}.drive-sync-btn.primary{background:var(--ink);color:var(--paper)}.drive-sync-status{font-size:9px;border:1px solid var(--line);border-radius:999px;padding:5px 7px;color:var(--muted)}\n</style>\n'''
+css='''\n<style id="gdrive-sync-v0212">\n.drive-sync-card{border:1px solid var(--line);background:var(--card);border-radius:16px;overflow:hidden;margin:0 0 14px}.drive-sync-row{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line)}.drive-sync-row:last-child{border-bottom:0}.drive-sync-copy{flex:1;min-width:0}.drive-sync-copy b{display:block;font-size:12px}.drive-sync-copy small{display:block;font-size:10px;color:var(--muted);margin-top:3px}.drive-sync-btn{position:relative;z-index:3;pointer-events:auto;touch-action:manipulation;-webkit-user-select:none;user-select:none;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:9px;padding:10px 12px;min-height:42px;font-size:10px;font-weight:800}.drive-sync-btn.primary{background:var(--ink);color:var(--paper)}.drive-sync-status{font-size:9px;border:1px solid var(--line);border-radius:999px;padding:5px 7px;color:var(--muted)}\n</style>\n'''
 if 'gdrive-sync-v0212' not in s:
     s=s.replace('</head>',css+'</head>',1)
 
-section='''\n      <div class="settings-group" id="googleDriveSyncSettings">\n        <div class="group-title">Google Drive Sync</div>\n        <div class="drive-sync-card">\n          <div class="drive-sync-row"><span>☁</span><span class="drive-sync-copy"><b>Google Drive</b><small id="driveSyncSubtitle">Not connected</small></span><span id="driveSyncStatus" class="drive-sync-status">Offline</span><button id="driveConnectBtn" class="drive-sync-btn" onclick="connectDriveNative()">Connect</button></div>\n          <div class="drive-sync-row"><span>↺</span><span class="drive-sync-copy"><b>Library sync</b><small>Progress, notes, highlights, collections, and reader settings</small></span><button class="drive-sync-btn primary" onclick="syncDriveNative()">Sync now</button></div>\n        </div>\n      </div>\n'''
+section='''\n      <div class="settings-group" id="googleDriveSyncSettings">\n        <div class="group-title">Google Drive Sync</div>\n        <div class="drive-sync-card">\n          <div class="drive-sync-row"><span>☁</span><span class="drive-sync-copy"><b>Google Drive</b><small id="driveSyncSubtitle">Not connected</small></span><span id="driveSyncStatus" class="drive-sync-status">Offline</span><button id="driveConnectBtn" type="button" class="drive-sync-btn">Connect</button></div>\n          <div class="drive-sync-row"><span>↺</span><span class="drive-sync-copy"><b>Library sync</b><small>Progress, notes, highlights, collections, and reader settings</small></span><button id="driveSyncNowBtn" type="button" class="drive-sync-btn primary">Sync now</button></div>\n        </div>\n      </div>\n'''
 if 'id="googleDriveSyncSettings"' not in s:
     marker='<div class="settings-group">\n        <div class="group-title">Language tools</div>'
     if marker in s:
@@ -71,7 +71,23 @@ if 'id="googleDriveSyncSettings"' not in s:
         if idx<0: raise SystemExit('settings UI anchor not found')
         s=s[:idx]+section+s[idx:]
 
-js=r'''\n<script id="gdrive-sync-bridge-js">\nfunction driveNative(){return window.DriveSync||null}\nfunction driveUi(connected,message){\n  const st=document.getElementById('driveSyncStatus'),sub=document.getElementById('driveSyncSubtitle'),btn=document.getElementById('driveConnectBtn');\n  if(st){st.textContent=connected?'Connected':'Offline'}\n  if(sub){sub.textContent=message|| (connected?'Google Drive connected':'Not connected')}\n  if(btn){btn.textContent=connected?'Disconnect':'Connect';btn.onclick=connected?disconnectDriveNative:connectDriveNative}\n}\nfunction connectDriveNative(){const n=driveNative();if(!n){showToast?.('Google Drive requires the Android app');return}try{n.connectGoogleDrive()}catch(e){showToast?.('Could not open Google Drive login')}}\nfunction disconnectDriveNative(){const n=driveNative();try{n?.disconnectGoogleDrive()}catch(e){}driveUi(false,'Disconnected')}\nfunction onNativeDriveAuth(ok,message){driveUi(!!ok,message);if(typeof showToast==='function')showToast(message|| (ok?'Connected':'Connection failed'))}\nfunction makeDriveSnapshot(){return JSON.stringify({version:1,updatedAt:new Date().toISOString(),settings:typeof settings==='object'?settings:{},annotations:typeof annotations==='function'?annotations():[],lastOpenedBook:localStorage.getItem('lastOpenedBook_v4')||null})}\nfunction syncDriveNative(){const n=driveNative();if(!n){showToast?.('Google Drive requires the Android app');return}try{n.syncGoogleDrive(makeDriveSnapshot())}catch(e){showToast?.('Sync could not start')}}\nfunction onNativeDriveSync(ok,message){if(typeof showToast==='function')showToast(message|| (ok?'Sync complete':'Sync failed'));if(ok)localStorage.setItem('driveLastSync_v1',new Date().toISOString())}\nwindow.addEventListener('DOMContentLoaded',()=>{try{driveUi(!!driveNative()?.isGoogleDriveConnected(),driveNative()?.isGoogleDriveConnected()?'Google Drive connected':'Not connected')}catch(e){driveUi(false,'Not connected')}});\n</script>\n'''
+js=r'''\n<script id="gdrive-sync-bridge-js">\nfunction driveNative(){return window.DriveSync||null}\nfunction driveUi(connected,message){\n  const st=document.getElementById('driveSyncStatus'),sub=document.getElementById('driveSyncSubtitle'),btn=document.getElementById('driveConnectBtn');\n  if(st){st.textContent=connected?'Connected':'Offline'}\n  if(sub){sub.textContent=message|| (connected?'Google Drive connected':'Not connected')}\n  if(btn){btn.textContent=connected?'Disconnect':'Connect';btn.dataset.connected=connected?'1':'0'}\n}\nfunction connectDriveNative(){const n=driveNative();if(!n){showToast?.('Google Drive requires the Android app');return}try{n.connectGoogleDrive()}catch(e){showToast?.('Could not open Google Drive login')}}\nfunction disconnectDriveNative(){const n=driveNative();try{n?.disconnectGoogleDrive()}catch(e){}driveUi(false,'Disconnected')}\nfunction onNativeDriveAuth(ok,message){driveUi(!!ok,message);if(typeof showToast==='function')showToast(message|| (ok?'Connected':'Connection failed'))}\nfunction makeDriveSnapshot(){return JSON.stringify({version:1,updatedAt:new Date().toISOString(),settings:typeof settings==='object'?settings:{},annotations:typeof annotations==='function'?annotations():[],lastOpenedBook:localStorage.getItem('lastOpenedBook_v4')||null})}\nfunction syncDriveNative(){const n=driveNative();if(!n){showToast?.('Google Drive requires the Android app');return}try{n.syncGoogleDrive(makeDriveSnapshot())}catch(e){showToast?.('Sync could not start')}}\nfunction onNativeDriveSync(ok,message){if(typeof showToast==='function')showToast(message|| (ok?'Sync complete':'Sync failed'));if(ok)localStorage.setItem('driveLastSync_v1',new Date().toISOString())}
+function bindDriveButtons(){
+  const connectBtn=document.getElementById('driveConnectBtn');
+  const syncBtn=document.getElementById('driveSyncNowBtn');
+  if(connectBtn&&!connectBtn.dataset.bound){
+    connectBtn.dataset.bound='1';
+    const fire=(e)=>{e?.preventDefault?.();e?.stopPropagation?.();connectBtn.dataset.connected==='1'?disconnectDriveNative():connectDriveNative()};
+    connectBtn.addEventListener('click',fire,{passive:false});
+    connectBtn.addEventListener('touchend',fire,{passive:false});
+  }
+  if(syncBtn&&!syncBtn.dataset.bound){
+    syncBtn.dataset.bound='1';
+    const fire=(e)=>{e?.preventDefault?.();e?.stopPropagation?.();syncDriveNative()};
+    syncBtn.addEventListener('click',fire,{passive:false});
+    syncBtn.addEventListener('touchend',fire,{passive:false});
+  }
+}\nwindow.addEventListener('DOMContentLoaded',()=>{bindDriveButtons();try{driveUi(!!driveNative()?.isGoogleDriveConnected(),driveNative()?.isGoogleDriveConnected()?'Google Drive connected':'Not connected')}catch(e){driveUi(false,'Not connected')}});\n</script>\n'''
 if 'gdrive-sync-bridge-js' not in s:
     js_norm = js.replace(r'\n','\n')
     js_inner = js_norm.split('>',1)[1].rsplit('</script>',1)[0]
