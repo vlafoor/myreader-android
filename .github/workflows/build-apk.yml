@@ -197,7 +197,7 @@ jobs:
       - name: Apply MyReader v0.2.15 latest UI and auth fix
         shell: bash
         run: |
-          cat .github/v0215/chunk00 .github/v0215/chunk01 .github/v0215/chunk02 .github/v0215/chunk03 .github/v0215/chunk04 .github/v0215/chunk05 .github/v0215/chunk06 .github/v0215/chunk07 | base64 -d > /tmp/v0215-overlay.zip
+          cat .github/v0215/fix0a .github/v0215/fix0b .github/v0215/chunk01 .github/v0215/chunk02 .github/v0215/chunk03 .github/v0215/fix4a .github/v0215/fix4b .github/v0215/chunk05 .github/v0215/chunk06 .github/v0215/fix7a .github/v0215/fix7b | base64 -d > /tmp/v0215-overlay.zip
           echo "e18598ec0f71894b8fdaf7af0a9290fdcba6d41a352bd7ebd259a2cfa9d86bce  /tmp/v0215-overlay.zip" | sha256sum -c -
           unzip -o /tmp/v0215-overlay.zip -d app
 
