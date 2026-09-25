@@ -166,16 +166,32 @@ jobs:
           grep -q "getPickedMetadata2" app/src/main/java/com/myreader/app/MainActivity.java
           grep -q "detectNativeFileType" app/src/main/java/com/myreader/app/MainActivity.java
 
-      - name: Apply Google Drive OAuth and sync patch
+      - name: Apply Google Drive v0.2.14 safe sync patch
         shell: bash
         run: |
-          python .github/patch_gdrive_v0212.py
-          python -c "import re; s=open('app/src/main/assets/index.html',encoding='utf-8').read(); m=re.search(r'<script>(.*)</script>',s,re.S); assert m; open('/tmp/myreader-gdrive.js','w',encoding='utf-8').write(m.group(1))"
-          node --check /tmp/myreader-gdrive.js
-          grep -q "versionCode 21" app/build.gradle
-          grep -q "0.2.13" app/build.gradle
+          cat .github/gdrive14/part00 .github/gdrive14/part01 .github/gdrive14/part02 | base64 -d | gzip -d > /tmp/patch_gdrive_v0214.py
+          python /tmp/patch_gdrive_v0214.py
+          python - <<'PY'
+          from pathlib import Path
+          import re, hashlib
+          s=Path('app/src/main/assets/index.html').read_text(encoding='utf-8')
+          blocks=[]
+          for m in re.finditer(r'<script([^>]*)>([\s\S]*?)</script>',s):
+              if 'src=' not in m.group(1) and m.group(2).strip():
+                  blocks.append(m.group(2))
+          main=max(blocks,key=len)
+          Path('/tmp/myreader-main-v0214.js').write_text(main,encoding='utf-8')
+          digest=hashlib.sha256(main.encode()).hexdigest()
+          print('MAIN_JS_SHA256='+digest)
+          assert digest == 'ad360bdd7be1da8c6e58b5cc74b5635628ce804b8875437dc5e7cd307475bae3'
+          PY
+          node --check /tmp/myreader-main-v0214.js
+          node --check app/src/main/assets/drive-sync.js
+          grep -q "versionCode 22" app/build.gradle
+          grep -q "versionName '0.2.14'" app/build.gradle
+          grep -q "last_loaded_version" app/src/main/java/com/myreader/app/MainActivity.java
           grep -q "DriveSyncBridge" app/src/main/java/com/myreader/app/MainActivity.java
-          grep -q "googleDriveSyncSettings" app/src/main/assets/index.html
+          grep -q "drive-sync.js" app/src/main/assets/index.html
 
       - name: Upload final v0.2 source
         uses: actions/upload-artifact@v4
@@ -214,15 +230,16 @@ jobs:
 
       - name: Copy APK and signing fingerprint
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk MyReader-v0.2.13-gdrive-buttons-fixed.apk
-          $ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner verify --print-certs MyReader-v0.2.13-gdrive-buttons-fixed.apk > signing.txt
+          cp app/build/outputs/apk/debug/app-debug.apk MyReader-v0.2.14-gdrive-sync.apk
+          $ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner verify --print-certs MyReader-v0.2.14-gdrive-sync.apk > signing.txt
           cat signing.txt
+          grep -q "B5:E6:7F:14:E8:E6:E7:EE:75:93:CC:1A:18:E6:97:2D:FA:C7:05:8C" signing.txt
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MyReader-v0.2.13-GDrive-Buttons-Fixed
+          name: MyReader-v0.2.14-GDrive-Sync
           path: |
-            MyReader-v0.2.13-gdrive-buttons-fixed.apk
+            MyReader-v0.2.14-gdrive-sync.apk
             signing.txt
           retention-days: 30
