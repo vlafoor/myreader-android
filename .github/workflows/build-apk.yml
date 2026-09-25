@@ -171,6 +171,7 @@ jobs:
         run: |
           cat .github/gdrive14/part00 .github/gdrive14/part01 .github/gdrive14/part02 | base64 -d | gzip -d > /tmp/patch_gdrive_v0214.py
           python /tmp/patch_gdrive_v0214.py
+          sed -i 's/BuildConfig.VERSION_CODE/22/' app/src/main/java/com/myreader/app/MainActivity.java
           python - <<'PY'
           from pathlib import Path
           import re, hashlib
@@ -201,6 +202,8 @@ jobs:
             app/src/main/assets/index.html
             app/src/main/assets/pdf.min.js
             app/src/main/assets/pdf.worker.min.js
+            app/src/main/assets/drive-sync.js
+            app/src/main/assets/drive-sync.css
             app/src/main/java/com/myreader/app/MainActivity.java
             app/src/main/AndroidManifest.xml
             app/src/main/res
