@@ -246,25 +246,30 @@ jobs:
                   'import com.google.android.gms.common.api.Scope;\nimport com.google.android.gms.common.api.ApiException;'
               )
 
-          old_request = '''return AuthorizationRequest.builder()
-                  .setRequestedScopes(Arrays.asList(
-                          new Scope(DRIVE_APPDATA_SCOPE),
-                          new Scope(DRIVE_FILE_SCOPE)))
-                  .build();'''
+          request_pattern = re.compile(
+              r'return\s+AuthorizationRequest\.builder\(\)\s*'
+              r'\.setRequestedScopes\(Arrays\.asList\(\s*'
+              r'new\s+Scope\(DRIVE_APPDATA_SCOPE\)\s*,\s*'
+              r'new\s+Scope\(DRIVE_FILE_SCOPE\)\s*\)\)\s*'
+              r'\.build\(\);',
+              re.S
+          )
           new_request = '''return AuthorizationRequest.builder()
                   .setRequestedScopes(Arrays.asList(
                           new Scope(DRIVE_APPDATA_SCOPE)))
                   .build();'''
-          assert old_request in j, 'Drive scope block not found'
-          j = j.replace(old_request, new_request, 1)
+          j, count = request_pattern.subn(new_request, j, count=1)
+          assert count == 1, 'Drive scope block not found'
 
-          old_result = '''if (requestCode == DRIVE_AUTH_REQUEST) {
-              if (resultCode == RESULT_OK && data != null) {
-                  try { acceptDriveAuthorization(driveAuthorizationClient.getAuthorizationResultFromIntent(data)); }
-                  catch (Exception e) { notifyDriveAuth(false, "Google Drive authorization failed: " + e.getMessage()); }
-              } else notifyDriveAuth(false, "Google Drive connection cancelled");
-              return;
-          }'''
+          result_pattern = re.compile(
+              r'if\s*\(requestCode\s*==\s*DRIVE_AUTH_REQUEST\)\s*\{\s*'
+              r'if\s*\(resultCode\s*==\s*RESULT_OK\s*&&\s*data\s*!=\s*null\)\s*\{\s*'
+              r'try\s*\{\s*acceptDriveAuthorization\(driveAuthorizationClient\.getAuthorizationResultFromIntent\(data\)\);\s*\}\s*'
+              r'catch\s*\(Exception\s+e\)\s*\{\s*notifyDriveAuth\(false,\s*"Google Drive authorization failed: "\s*\+\s*e\.getMessage\(\)\);\s*\}\s*'
+              r'\}\s*else\s*notifyDriveAuth\(false,\s*"Google Drive connection cancelled"\);\s*'
+              r'return;\s*\}',
+              re.S
+          )
           new_result = '''if (requestCode == DRIVE_AUTH_REQUEST) {
               if (data != null) {
                   try {
@@ -282,8 +287,8 @@ jobs:
               }
               return;
           }'''
-          assert old_result in j, 'Drive result block not found'
-          j = j.replace(old_result, new_result, 1)
+          j, count = result_pattern.subn(new_result, j, count=1)
+          assert count == 1, 'Drive result block not found'
           j = re.sub(r'int currentVersion = \d+;', 'int currentVersion = 23;', j, count=1)
           java.write_text(j, encoding='utf-8')
 
