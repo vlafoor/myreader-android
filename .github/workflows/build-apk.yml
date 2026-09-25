@@ -172,8 +172,8 @@ jobs:
           python .github/patch_gdrive_v0212.py
           python -c "import re; s=open('app/src/main/assets/index.html',encoding='utf-8').read(); m=re.search(r'<script>(.*)</script>',s,re.S); assert m; open('/tmp/myreader-gdrive.js','w',encoding='utf-8').write(m.group(1))"
           node --check /tmp/myreader-gdrive.js
-          grep -q "versionCode 20" app/build.gradle
-          grep -q "0.2.12" app/build.gradle
+          grep -q "versionCode 21" app/build.gradle
+          grep -q "0.2.13" app/build.gradle
           grep -q "DriveSyncBridge" app/src/main/java/com/myreader/app/MainActivity.java
           grep -q "googleDriveSyncSettings" app/src/main/assets/index.html
 
@@ -214,15 +214,15 @@ jobs:
 
       - name: Copy APK and signing fingerprint
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk MyReader-v0.2.12-gdrive-debug.apk
-          $ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner verify --print-certs MyReader-v0.2.12-gdrive-debug.apk > signing.txt
+          cp app/build/outputs/apk/debug/app-debug.apk MyReader-v0.2.13-gdrive-buttons-fixed.apk
+          $ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner verify --print-certs MyReader-v0.2.13-gdrive-buttons-fixed.apk > signing.txt
           cat signing.txt
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MyReader-v0.2.12-GDrive-APK
+          name: MyReader-v0.2.13-GDrive-Buttons-Fixed
           path: |
-            MyReader-v0.2.12-gdrive-debug.apk
+            MyReader-v0.2.13-gdrive-buttons-fixed.apk
             signing.txt
           retention-days: 30
