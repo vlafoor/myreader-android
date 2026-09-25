@@ -308,6 +308,34 @@ jobs:
           ! grep -A5 "driveAuthorizationRequest" app/src/main/java/com/myreader/app/MainActivity.java | grep -q "new Scope(DRIVE_FILE_SCOPE)"
           grep -q "Google Drive authorization failed (" app/src/main/java/com/myreader/app/MainActivity.java
 
+      - name: Replace OAuth with Android folder picker sync v0.2.16
+        shell: bash
+        run: |
+          cat .github/saf216/part00 .github/saf216/part01 | base64 -d | gzip -d > /tmp/patch_saf_v0216.py
+          cd app
+          python /tmp/patch_saf_v0216.py
+          python - <<'PY'
+          from pathlib import Path
+          import re, hashlib
+          h=Path('src/main/assets/index.html').read_text(encoding='utf-8')
+          blocks=[m.group(2) for m in re.finditer(r'<script([^>]*)>([\s\S]*?)</script>',h) if 'src=' not in m.group(1) and m.group(2).strip()]
+          main=max(blocks,key=len)
+          digest=hashlib.sha256(main.encode()).hexdigest()
+          print('V0216_MAIN_JS_SHA256='+digest)
+          assert digest == '5d2805c170d56d10dbcc8765ff45f3ec57c552da8fa540fc935ecbb02acb2970'
+          Path('/tmp/myreader-main-v0216.js').write_text(main,encoding='utf-8')
+          PY
+          node --check /tmp/myreader-main-v0216.js
+          node --check src/main/assets/drive-sync.js
+          grep -q "versionCode 24" build.gradle
+          grep -q "versionName '0.2.16'" build.gradle
+          grep -q "ACTION_OPEN_DOCUMENT_TREE" src/main/java/com/myreader/app/MainActivity.java
+          grep -q "takePersistableUriPermission" src/main/java/com/myreader/app/MainActivity.java
+          grep -q "myreader-sync.json" src/main/java/com/myreader/app/MainActivity.java
+          grep -q "Google Drive folder" src/main/assets/index.html
+          ! grep -q "play-services-auth" build.gradle
+          cd ..
+
       - name: Upload final v0.2 source
         uses: actions/upload-artifact@v4
         with:
@@ -347,16 +375,16 @@ jobs:
 
       - name: Copy APK and signing fingerprint
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk MyReader-v0.2.15-latest-ui-gdrive.apk
-          $ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner verify --print-certs MyReader-v0.2.15-latest-ui-gdrive.apk > signing.txt
+          cp app/build/outputs/apk/debug/app-debug.apk MyReader-v0.2.16-drive-folder-sync.apk
+          $ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner verify --print-certs MyReader-v0.2.16-drive-folder-sync.apk > signing.txt
           cat signing.txt
           grep -qi "b5e67f14e8e6e7ee7593cc1a18e6972dfac7058c" signing.txt
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MyReader-v0.2.15-Latest-UI-GDrive
+          name: MyReader-v0.2.16-Drive-Folder-Sync
           path: |
-            MyReader-v0.2.15-latest-ui-gdrive.apk
+            MyReader-v0.2.16-drive-folder-sync.apk
             signing.txt
           retention-days: 30
