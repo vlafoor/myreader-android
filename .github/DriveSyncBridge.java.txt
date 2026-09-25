@@ -1,0 +1,117 @@
+
+    private AuthorizationRequest driveAuthorizationRequest() {
+        return AuthorizationRequest.builder()
+                .setRequestedScopes(Arrays.asList(
+                        new Scope(DRIVE_APPDATA_SCOPE),
+                        new Scope(DRIVE_FILE_SCOPE)))
+                .build();
+    }
+
+    private void acceptDriveAuthorization(AuthorizationResult result) {
+        if (result == null || result.getAccessToken() == null || result.getAccessToken().isEmpty()) {
+            notifyDriveAuth(false, "No Google Drive access token returned");
+            return;
+        }
+        driveAccessToken = result.getAccessToken();
+        notifyDriveAuth(true, "Google Drive connected");
+    }
+
+    private void notifyDriveAuth(boolean ok, String message) {
+        final String js = "window.onNativeDriveAuth && window.onNativeDriveAuth(" + ok + "," + org.json.JSONObject.quote(message == null ? "" : message) + ");";
+        runOnUiThread(() -> webView.evaluateJavascript(js, null));
+    }
+
+    private void notifyDriveSync(boolean ok, String message) {
+        final String js = "window.onNativeDriveSync && window.onNativeDriveSync(" + ok + "," + org.json.JSONObject.quote(message == null ? "" : message) + ");";
+        runOnUiThread(() -> webView.evaluateJavascript(js, null));
+    }
+
+    private class DriveSyncBridge {
+        @JavascriptInterface
+        public void connectGoogleDrive() {
+            runOnUiThread(() -> {
+                if (driveAuthorizationClient == null) {
+                    driveAuthorizationClient = Identity.getAuthorizationClient(MainActivity.this);
+                }
+                driveAuthorizationClient.authorize(driveAuthorizationRequest())
+                        .addOnSuccessListener(result -> {
+                            if (result.hasResolution()) {
+                                PendingIntent pi = result.getPendingIntent();
+                                if (pi == null) {
+                                    notifyDriveAuth(false, "Google authorization needs a resolution but returned no intent");
+                                    return;
+                                }
+                                try {
+                                    startIntentSenderForResult(pi.getIntentSender(), DRIVE_AUTH_REQUEST, null, 0, 0, 0);
+                                } catch (Exception e) {
+                                    notifyDriveAuth(false, "Could not open Google authorization: " + e.getMessage());
+                                }
+                            } else {
+                                acceptDriveAuthorization(result);
+                            }
+                        })
+                        .addOnFailureListener(e -> notifyDriveAuth(false, "Google Drive authorization failed: " + e.getMessage()));
+            });
+        }
+
+        @JavascriptInterface
+        public void disconnectGoogleDrive() {
+            driveAccessToken = null;
+            notifyDriveAuth(false, "Disconnected");
+        }
+
+        @JavascriptInterface
+        public boolean isGoogleDriveConnected() {
+            return driveAccessToken != null && !driveAccessToken.isEmpty();
+        }
+
+        @JavascriptInterface
+        public void syncGoogleDrive(String payloadJson) {
+            final String token = driveAccessToken;
+            if (token == null || token.isEmpty()) {
+                notifyDriveSync(false, "Connect Google Drive first");
+                return;
+            }
+            final String payload = payloadJson == null ? "{}" : payloadJson;
+            new Thread(() -> {
+                try {
+                    uploadDriveSnapshot(token, payload);
+                    notifyDriveSync(true, "Google Drive sync complete");
+                } catch (Exception e) {
+                    notifyDriveSync(false, "Sync failed: " + e.getMessage());
+                }
+            }, "MyReaderDriveSync").start();
+        }
+    }
+
+    private void uploadDriveSnapshot(String token, String payloadJson) throws Exception {
+        String boundary = "myreader_" + System.currentTimeMillis();
+        String metadata = "{\"name\":\"myreader-sync.json\",\"parents\":[\"appDataFolder\"]}";
+        byte[] body = ("--" + boundary + "\r\n" +
+                "Content-Type: application/json; charset=UTF-8\r\n\r\n" + metadata + "\r\n" +
+                "--" + boundary + "\r\n" +
+                "Content-Type: application/json; charset=UTF-8\r\n\r\n" + payloadJson + "\r\n" +
+                "--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8);
+        URL url = new URL("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name");
+        HttpURLConnection c = (HttpURLConnection) url.openConnection();
+        c.setRequestMethod("POST");
+        c.setDoOutput(true);
+        c.setConnectTimeout(15000);
+        c.setReadTimeout(20000);
+        c.setRequestProperty("Authorization", "Bearer " + token);
+        c.setRequestProperty("Content-Type", "multipart/related; boundary=" + boundary);
+        try (OutputStream os = c.getOutputStream()) {
+            os.write(body);
+        }
+        int code = c.getResponseCode();
+        if (code < 200 || code >= 300) {
+            BufferedReader br = new BufferedReader(new InputStreamReader(
+                    c.getErrorStream() != null ? c.getErrorStream() : c.getInputStream(),
+                    StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = br.readLine()) != null) sb.append(line);
+            throw new Exception("Drive API " + code + ": " + sb);
+        }
+        c.disconnect();
+    }
