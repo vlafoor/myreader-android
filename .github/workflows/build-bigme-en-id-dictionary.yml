@@ -1,0 +1,155 @@
+name: Build Bigme English Indonesian Dictionary
+
+on:
+  push:
+    paths:
+      - '.github/workflows/build-bigme-en-id-dictionary.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install MDX tools
+        run: pip install 'mdict-utils==1.3.14'
+
+      - name: Download open English Indonesian dictionary source
+        run: |
+          curl -fL --retry 3 \
+            https://raw.githubusercontent.com/open-dsl-dict/wiktionary-dict/master/src/en-id-enwiktionary.txt \
+            -o en-id-source.txt
+
+      - name: Build MDX
+        run: |
+          cat > build_dict.py <<'PY'
+          import re
+          import html
+          from collections import OrderedDict
+          from mdict_utils.base.writemdict import MDictWriter
+
+          src = open("en-id-source.txt", encoding="utf-8").read().splitlines()
+          entries = OrderedDict()
+
+          pat = re.compile(r"^(.*?)\s+\{([^}]+)\}(?:\s+\((.*?)\))?\s*$")
+
+          for raw in src:
+              line = raw.strip()
+              if not line or line.startswith("#") or " :: " not in line:
+                  continue
+              left, trans = line.split(" :: ", 1)
+              trans = trans.strip()
+              if not trans:
+                  continue
+
+              m = pat.match(left.strip())
+              if m:
+                  word = m.group(1).strip()
+                  pos = m.group(2).strip()
+                  note = (m.group(3) or "").strip()
+              else:
+                  word = re.sub(r"\s*\{[^}]+\}.*$", "", left).strip()
+                  pos = ""
+                  note = ""
+
+              if not word:
+                  continue
+
+              item = (pos, note, trans)
+              bucket = entries.setdefault(word, [])
+              if item not in bucket:
+                  bucket.append(item)
+
+          dictionary = {}
+          for word, senses in entries.items():
+              parts = [
+                  '<div style="font-family:sans-serif;line-height:1.35">',
+                  f'<div style="font-size:1.12em;font-weight:700;margin-bottom:6px">{html.escape(word)}</div>'
+              ]
+              for pos, note, trans in senses:
+                  meta = []
+                  if pos:
+                      meta.append(f'<span style="font-style:italic;color:#666">{html.escape(pos)}</span>')
+                  if note:
+                      meta.append(f'<span style="color:#777">({html.escape(note)})</span>')
+                  prefix = " ".join(meta)
+                  if prefix:
+                      prefix += " — "
+                  parts.append(
+                      '<div style="margin:4px 0">'
+                      + prefix
+                      + f'<span>{html.escape(trans)}</span>'
+                      + '</div>'
+                  )
+              parts.append(
+                  '<div style="margin-top:8px;font-size:.82em;color:#888">'
+                  'Sumber: Wiktionary, CC BY-SA 3.0 / GFDL'
+                  '</div></div>'
+              )
+              dictionary[word] = "".join(parts)
+
+          assert len(dictionary) >= 5000, len(dictionary)
+
+          writer = MDictWriter(
+              dictionary,
+              title="English → Indonesian (Bigme)",
+              description=(
+                  "English-Indonesian dictionary for Bigme/xReader. "
+                  "Derived from the open-dsl-dict Wiktionary extraction. "
+                  "Source data: Wiktionary; CC BY-SA 3.0 / GNU FDL."
+              ),
+              encoding="utf8",
+              compression_type=2,
+              version="2.0",
+          )
+          with open("English-Indonesian-Bigme.mdx", "wb") as f:
+              writer.write(f)
+
+          print(f"Built {len(dictionary)} headwords")
+          PY
+          python build_dict.py
+
+      - name: Validate MDX
+        run: |
+          mdict -m English-Indonesian-Bigme.mdx
+          mdict -q book English-Indonesian-Bigme.mdx | tee /tmp/book.txt
+          grep -qi "buku" /tmp/book.txt
+          mdict -q love English-Indonesian-Bigme.mdx | tee /tmp/love.txt
+          test -s English-Indonesian-Bigme.mdx
+
+      - name: Write install guide
+        run: |
+          cat > README-BIGME.txt <<'EOF'
+          English → Indonesian dictionary for Bigme/xReader
+
+          FILE:
+          English-Indonesian-Bigme.mdx
+
+          INSTALL:
+          1. Copy English-Indonesian-Bigme.mdx to the /dict folder in Bigme internal storage.
+          2. Do NOT extract the .mdx file.
+          3. Open xReader and open a book.
+          4. Long-press an English word.
+          5. If needed, choose Dictionary / switch dictionary and select English → Indonesian (Bigme).
+
+          Source:
+          English-Indonesian dictionary extracted from English Wiktionary by open-dsl-dict.
+          Source data license: CC BY-SA 3.0 and GNU Free Documentation License.
+          This build contains roughly 5,000+ English headwords.
+          EOF
+
+      - name: Upload dictionary
+        uses: actions/upload-artifact@v4
+        with:
+          name: Bigme-English-Indonesian-MDX
+          path: |
+            English-Indonesian-Bigme.mdx
+            README-BIGME.txt
+          retention-days: 30
