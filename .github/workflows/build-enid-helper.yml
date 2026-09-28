@@ -1,0 +1,53 @@
+name: Build EN-ID Helper
+
+on:
+  push:
+    paths:
+      - 'helper-app/**'
+      - '.github/workflows/build-enid-helper.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle 9.6
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.6.0'
+
+      - name: Accept Android SDK licenses
+        run: yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses >/dev/null || true
+
+      - name: Install Android SDK 36
+        run: $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Build helper APK
+        run: gradle -p helper-app :app:assembleDebug --stacktrace
+
+      - name: Verify APK
+        run: |
+          cp helper-app/app/build/outputs/apk/debug/app-debug.apk EN-ID-Dictionary-Helper-v0.1.0.apk
+          test -s EN-ID-Dictionary-Helper-v0.1.0.apk
+          $ANDROID_SDK_ROOT/build-tools/36.0.0/aapt dump badging EN-ID-Dictionary-Helper-v0.1.0.apk | tee apk-info.txt
+          grep -q "package: name='com.myreader.enidhelper'" apk-info.txt
+          unzip -l EN-ID-Dictionary-Helper-v0.1.0.apk | tee apk-files.txt
+          du -h EN-ID-Dictionary-Helper-v0.1.0.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: EN-ID-Dictionary-Helper-v0.1.0
+          path: |
+            EN-ID-Dictionary-Helper-v0.1.0.apk
+            apk-info.txt
+          retention-days: 30
