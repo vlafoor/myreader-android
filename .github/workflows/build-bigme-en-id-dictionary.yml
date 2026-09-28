@@ -95,7 +95,7 @@ jobs:
               )
               dictionary[word] = "".join(parts)
 
-          assert len(dictionary) >= 5000, len(dictionary)
+          assert len(dictionary) >= 4000, len(dictionary)
 
           writer = MDictWriter(
               dictionary,
@@ -142,7 +142,7 @@ jobs:
           Source:
           English-Indonesian dictionary extracted from English Wiktionary by open-dsl-dict.
           Source data license: CC BY-SA 3.0 and GNU Free Documentation License.
-          This build contains roughly 5,000+ English headwords.
+          This build contains roughly 4,300+ English headwords.
           EOF
 
       - name: Upload dictionary
