@@ -373,6 +373,43 @@ jobs:
           grep -q 'android:label="MyReader Preview"' app/src/main/AndroidManifest.xml
           grep -q 'android:name="com.myreader.app.MainActivity"' app/src/main/AndroidManifest.xml
 
+      - name: Apply faithful vNext prototype UI
+        shell: bash
+        run: |
+          cat .github/vnextfaithful/part0 .github/vnextfaithful/part1 .github/vnextfaithful/part2 .github/vnextfaithful/part3 .github/vnextfaithful/part4 | base64 -d | gzip -d > app/src/main/assets/index.html
+          echo "c3ae75151fd4a2ab9518d26bb28ad85cb76b881a5e04521bd68cdb2668fb84aa  app/src/main/assets/index.html" | sha256sum -c -
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          h=Path('app/src/main/assets/index.html').read_text(encoding='utf-8')
+          required=[
+              'id="library"', 'id="stats"', 'id="notes"', 'id="settings"',
+              'id="reader"', 'id="formatSheet"', 'id="selectionToolbar"',
+              'Reading Stats', 'Page turn effect', 'Book flip',
+              'Page Display', 'Crop', 'Split view', 'Go to page'
+          ]
+          for marker in required:
+              assert marker in h, f'Missing faithful UI marker: {marker}'
+          for forbidden in [
+              'The Quiet Edge','Ubur-Ubur Lembur','Teka-Teki Gambar Aneh',
+              'Makhluk Bumi','Catatan Pembunuhan','The Let Them Theory','Sapiens'
+          ]:
+              assert forbidden not in h, f'Demo content leaked into APK: {forbidden}'
+          assert 'readerSettingsBtn' not in h, 'Old Aa reader button leaked into visible UI'
+          assert '>Aa<' not in h, 'Old visible Aa button leaked into faithful UI'
+          blocks=[m.group(2) for m in re.finditer(r'<script([^>]*)>([\s\S]*?)</script>',h)
+                  if 'src=' not in m.group(1) and m.group(2).strip()]
+          assert blocks
+          for i,b in enumerate(blocks):
+              Path(f'/tmp/vnextfaithful-{i}.js').write_text(b,encoding='utf-8')
+          PY
+          for f in /tmp/vnextfaithful-*.js; do node --check "$f"; done
+          sed -i -E 's/versionCode[[:space:]]+[0-9]+/versionCode 26/' app/build.gradle
+          sed -i -E "s/versionName[[:space:]]+['\"][^'\"]+['\"]/versionName '0.3.1-preview'/" app/build.gradle
+          grep -q "applicationId 'com.myreader.app.vnextpreview'" app/build.gradle
+          grep -q "versionCode 26" app/build.gradle
+          grep -q "versionName '0.3.1-preview'" app/build.gradle
+
       - name: Upload final v0.2 source
         uses: actions/upload-artifact@v4
         with:
@@ -412,16 +449,16 @@ jobs:
 
       - name: Copy APK and signing fingerprint
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk MyReader-v0.3-Preview.apk
-          $ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner verify --print-certs MyReader-v0.3-Preview.apk > signing.txt
+          cp app/build/outputs/apk/debug/app-debug.apk MyReader-v0.3.1-Faithful-Preview.apk
+          $ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner verify --print-certs MyReader-v0.3.1-Faithful-Preview.apk > signing.txt
           cat signing.txt
           grep -qi "b5e67f14e8e6e7ee7593cc1a18e6972dfac7058c" signing.txt
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MyReader-v0.3-Preview
+          name: MyReader-v0.3.1-Faithful-Preview
           path: |
-            MyReader-v0.3-Preview.apk
+            MyReader-v0.3.1-Faithful-Preview.apk
             signing.txt
           retention-days: 30
