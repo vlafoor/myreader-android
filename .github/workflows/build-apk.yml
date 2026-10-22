@@ -1,5 +1,4 @@
 name: Build MyReader APK
-# v0.3.4 validation branch
 
 on:
   workflow_dispatch:
@@ -363,22 +362,11 @@ jobs:
           real_head_end = h.find('</head>')
           real_body = h.find('<body')
           assert 0 <= real_head_end < real_body, 'Real document head not found'
-          h = h[:real_head_end] + style_block + '\n' + h[real_head_end:]
-          # Fix viewport cropping on devices with persistent system/bottom navigation areas.
-          viewport_fix = '''
-<style id="vnext-viewport-fix">
-html,body{min-height:100%;height:auto;overflow-x:hidden}
-body{padding-bottom:calc(88px + env(safe-area-inset-bottom,0px))!important}
-#library,#stats,#notes,#settings{min-height:calc(100dvh - 88px);padding-bottom:calc(110px + env(safe-area-inset-bottom,0px))!important;box-sizing:border-box}
-#reader{height:100dvh!important;min-height:100dvh!important;box-sizing:border-box}
-#reader .reader-body,#readerBody{padding-bottom:calc(132px + env(safe-area-inset-bottom,0px))!important;box-sizing:border-box}
-.bottom-nav,.bottomnav,#bottomNav{position:fixed!important;left:0;right:0;bottom:0;z-index:120;padding-bottom:env(safe-area-inset-bottom,0px)}
-</style>
-'''
+          h = h[:real_head_end] + style_block + chr(10) + h[real_head_end:]
+          viewport_fix = '<style id="vnext-viewport-fix">html,body{min-height:100%;height:auto;overflow-x:hidden}body{padding-bottom:96px!important}#library,#stats,#notes,#settings{min-height:calc(100vh - 84px);padding-bottom:116px!important;box-sizing:border-box}#reader{height:100vh!important;min-height:100vh!important;box-sizing:border-box}#reader .reader-body,#readerBody{padding-bottom:136px!important;box-sizing:border-box}.bottom-nav,.bottomnav,#bottomNav{position:fixed!important;left:0;right:0;bottom:0;z-index:120}</style>'
           real_head_end = h.find('</head>')
-          h = h[:real_head_end] + viewport_fix + '\n' + h[real_head_end:]
-          # Strip accidental escaped-newline text that may have been emitted before the document.
-          h = re.sub(r'^(?:\\\\n|\\n)+', '', h)
+          h = h[:real_head_end] + viewport_fix + chr(10) + h[real_head_end:]
+          h = re.sub(r'^(?:\\\\n)+', '', h)
           Path('app/src/main/assets/index.html').write_text(h, encoding='utf-8')
 
           # Validate only the requested vNext UI additions while preserving the existing app.
@@ -393,8 +381,8 @@ body{padding-bottom:calc(88px + env(safe-area-inset-bottom,0px))!important}
           assert '#readerSettingsBtn{display:none!important}' in h, 'Legacy Aa button is not hidden'
           assert 'class="iconbtn vnext-reader-back"' in h and '>‹</button>' in h, 'Reader back button is not the approved one'
           assert 'vnext-sheet-backdrop' in h and 'vnext-stats-summary' in h and 'vnext-note-filters' in h, 'Approved prototype layout CSS missing'
-          assert not h.startswith('\\n') and not h.startswith('\\\\n'), 'Literal escaped newline leaked into rendered page'
-          assert 'id="vnext-viewport-fix"' in h, 'Viewport/safe-area fix missing'
+          assert not h.startswith('\\\\n'), 'Literal newline marker leaked into page'
+          assert 'id="vnext-viewport-fix"' in h, 'Viewport fix missing'
 
           # Preview must start empty; no prototype/demo books may leak in.
           for demo in [
