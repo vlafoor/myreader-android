@@ -11,9 +11,9 @@ h = re.sub(r'<style id="vnext-viewport-fix">.*?</style>', '', h, flags=re.S)
 h = h.replace('<span>✎</span>Notes', '<span>▤</span>Notes')
 h = h.replace('<div class="section-label">Your books</div>', '<div class="section-label">All books</div>')
 h = h.replace('<div class="topbar"><h1>Notes</h1><div></div></div>',
-              '<div class="topbar"><h1>Notes</h1><button class="iconbtn" onclick="showToast(\\'Search notes\\')">⌕</button></div>')
+              "<div class=\"topbar\"><h1>Notes</h1><button class=\"iconbtn\" onclick=\"showToast('Search notes')\">⌕</button></div>")
 h = h.replace('<div class="vnext-period-title" id="vnextPeriodTitle">This week</div>',
-              '<div class="v8-date-row"><button type="button" onclick="showToast(\\'Previous period\\')">‹</button><span id="vnextPeriodTitle">This week</span><button type="button" onclick="showToast(\\'Next period\\')">›</button></div>')
+              "<div class=\"v8-date-row\"><button type=\"button\" onclick=\"showToast('Previous period')\">‹</button><span id=\"vnextPeriodTitle\">This week</span><button type=\"button\" onclick=\"showToast('Next period')\">›</button></div>")
 
 # Approved v8 settings IA; keep existing MyReader functions and Drive IDs.
 settings_start = h.index('<section id="settings" class="screen">')
