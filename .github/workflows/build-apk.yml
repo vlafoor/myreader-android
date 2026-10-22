@@ -1,4 +1,5 @@
 name: Build MyReader APK
+# v0.3.4 validation branch
 
 on:
   workflow_dispatch:
