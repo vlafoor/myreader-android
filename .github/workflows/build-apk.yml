@@ -370,7 +370,7 @@ jobs:
 
           blocks = [
               m.group(2)
-              for m in re.finditer(r'<script([^>]*)>([\\s\\S]*?)</script>', h)
+              for m in re.finditer(r'<script([^>]*)>(.*?)</script>', h, re.S)
               if 'src=' not in m.group(1) and m.group(2).strip()
           ]
           assert blocks, 'No inline JS found'
