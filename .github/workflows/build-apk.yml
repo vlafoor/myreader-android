@@ -339,7 +339,7 @@ jobs:
       - name: Apply faithful vNext v0.3.1 preview
         shell: bash
         run: |
-          cat .github/vnextfaithful/pair0 .github/vnextfaithful/pair1 .github/vnextfaithful/pair2 .github/vnextfaithful/pair3 .github/vnextfaithful/pair4 | base64 -d | gzip -d > app/src/main/assets/index.html
+          cat .github/vnextfaithful3500/c{00..18} | base64 -d | gzip -d > app/src/main/assets/index.html
           echo "c3ae75151fd4a2ab9518d26bb28ad85cb76b881a5e04521bd68cdb2668fb84aa  app/src/main/assets/index.html" | sha256sum -c -
 
           python - <<'PY'
