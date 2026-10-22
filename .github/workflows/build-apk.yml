@@ -417,23 +417,6 @@ jobs:
           grep -q "versionName '0.3.5-stable-pages'" app/build.gradle
           grep -q 'android:label="MyReader Preview"' app/src/main/AndroidManifest.xml
 
-      - name: Apply approved v8 reference UI
-        shell: bash
-        run: |
-          python .github/apply_v8_ui.py
-          python - <<'PY'
-          from pathlib import Path
-          import re
-          h=Path('app/src/main/assets/index.html').read_text(encoding='utf-8')
-          assert 'id="v8-reference-ui"' in h
-          blocks=[m.group(2) for m in re.finditer(r'<script([^>]*)>(.*?)</script>',h,re.S) if 'src=' not in m.group(1) and m.group(2).strip()]
-          for i,b in enumerate(blocks):
-              Path(f'/tmp/v8-final-{i}.js').write_text(b,encoding='utf-8')
-          PY
-          for js in /tmp/v8-final-*.js; do node --check "$js"; done
-          grep -q "versionCode 31" app/build.gradle
-          grep -q "versionName '0.3.6-v8-ui'" app/build.gradle
-
       - name: Apply approved prototype v8 UI shell
         shell: bash
         run: |
