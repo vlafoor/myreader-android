@@ -338,7 +338,7 @@ jobs:
           ! grep -q "play-services-auth" build.gradle
           cd ..
 
-      - name: Apply vNext v8 reference UI
+      - name: Apply targeted vNext UI revisions only
         shell: bash
         run: |
           base64 -d .github/vnextpreview/patch.b64 | gzip -d > /tmp/patch_vnext_preview.py
@@ -348,182 +348,91 @@ jobs:
           from pathlib import Path
           import re
 
-          p = Path('app/src/main/assets/index.html')
-          h = p.read_text(encoding='utf-8')
+          h = Path('app/src/main/assets/index.html').read_text(encoding='utf-8')
 
-          # Move the existing vNext style out of any EPUB template and into the real head,
-          # then replace later visual experiments with the approved Full vNext Prototype v8 look.
+          # The vNext stylesheet was previously injected into an EPUB template string inside JS.
+          # Move it into the real document <head>, then keep the legacy Aa trigger hidden.
           style_start = h.index('<style id="vnext-preview-css">')
           style_end = h.index('</style>', style_start) + len('</style>')
           style_block = h[style_start:style_end]
           h = h[:style_start] + h[style_end:]
-
-          # Remove any previous viewport/chrome experiment from older preview builds.
-          h = re.sub(r'<style id="vnext-viewport-fix">.*?</style>', '', h, flags=re.S)
-
-          # Keep only the functional DOM added by the vNext patch; v8 below owns the visual layer.
-          style_block = re.sub(
-              r'/\* True immersive mode: hidden chrome must stop reserving space\. \*/.*?(?=/\* New compact reader footer\. \*/)',
-              '',
-              style_block,
-              flags=re.S
-          )
-          style_block = style_block.replace('</style>', '#readerSettingsBtn{display:none!important}\n</style>')
-
-          # Back button and note icon must match v8.
+          style_block = style_block.replace('</style>', '#readerSettingsBtn{display:none!important}\\n</style>')
           h = h.replace('<button class="iconbtn" onclick="closeReader()">←</button>',
                         '<button class="iconbtn vnext-reader-back" onclick="closeReader()" aria-label="Back">‹</button>', 1)
-          h = h.replace('<span>✎</span>Notes', '<span>▤</span>Notes')
-
-          # v8 main-page microcopy / controls.
-          h = h.replace('<div class="section-label">Your books</div>', '<div class="section-label">All books</div>')
-          h = h.replace('<div class="topbar"><h1>Notes</h1><div></div></div>',
-                        '<div class="topbar"><h1>Notes</h1><button class="iconbtn" onclick="showToast(\'Search notes\')">⌕</button></div>')
-          h = h.replace('<div class="vnext-period-title" id="vnextPeriodTitle">This week</div>',
-                        '<div class="v8-date-row"><button type="button" onclick="showToast(\'Previous period\')">‹</button><span id="vnextPeriodTitle">This week</span><button type="button" onclick="showToast(\'Next period\')">›</button></div>')
-
-          # Replace Settings markup with the approved v8 information architecture while keeping
-          # the existing MyReader functions and Drive element IDs behind the buttons.
-          settings_start = h.index('<section id="settings" class="screen">')
-          reader_start = h.index('<section id="reader" class="screen">', settings_start)
-          v8_settings = r'''
-  <section id="settings" class="screen">
-    <div class="topbar"><h1>Settings</h1><div></div></div>
-    <div class="settings-scroll">
-      <div class="settings-group">
-        <div class="group-title">Reading appearance</div>
-        <div class="settings-card simple">
-          <button class="setting-link" onclick="openReadingSettingsPreview()"><span class="sl-icon">Aa</span><span class="sl-copy"><b>Reader font</b><small>EPUB and TXT reading font</small></span><span class="settings-badge">Georgia</span><span class="sl-arrow">›</span></button>
-          <button class="setting-link" onclick="openReadingSettingsPreview()"><span class="sl-icon">◐</span><span class="sl-copy"><b>Reading theme</b><small>Reader page background</small></span><span class="settings-badge">Paper</span><span class="sl-arrow">›</span></button>
-          <button class="setting-link" onclick="toggleImmersivePreference()"><span class="sl-icon">↔</span><span class="sl-copy"><b>Tap to hide controls</b><small>Center tap hides or shows reader controls</small></span><span id="vnextTapHideBadge" class="settings-badge">On</span></button>
-          <button class="setting-link" onclick="vnextCycleTurnMethod()"><span class="sl-icon">⇆</span><span class="sl-copy"><b>Page turn method</b><small>Choose how you move between pages</small></span><span id="vnextTurnMethodBadge" class="settings-badge">Tap + swipe</span><span class="sl-arrow">›</span></button>
-          <button class="setting-link" onclick="vnextCycleTurnEffect()"><span class="sl-icon">▱</span><span class="sl-copy"><b>Page turn effect</b><small>Instant is lightest; Book flip feels like a real page</small></span><span id="vnextTurnEffectBadge" class="settings-badge">Instant</span><span class="sl-arrow">›</span></button>
-          <button class="setting-link" onclick="toggleEinkReader()"><span class="sl-icon">↯</span><span class="sl-copy"><b>E-Ink friendly mode</b><small>Reduce animation and redraws</small></span><span id="einkSettingsBadge" class="settings-badge">On</span></button>
-        </div>
-      </div>
-      <div class="settings-group">
-        <div class="group-title">PDF & Comics</div>
-        <div class="settings-card simple">
-          <button class="setting-link" onclick="setPdfDefaultFromSettings('width')"><span class="sl-icon">▤</span><span class="sl-copy"><b>Default PDF view</b><small>Applied when opening PDF</small></span><span id="pdfDefaultBadge" class="settings-badge">Fit width</span><span class="sl-arrow">›</span></button>
-          <button class="setting-link" onclick="cyclePdfRenderDefault()"><span class="sl-icon">⌗</span><span class="sl-copy"><b>Auto crop margins</b><small>Trim blank edges on scanned pages</small></span><span class="settings-badge">On</span></button>
-          <button class="setting-link" onclick="showToast('Crop preference is remembered per book')"><span class="sl-icon">◩</span><span class="sl-copy"><b>Remember crop per book</b><small>Keep each book's crop choice</small></span><span class="settings-badge">On</span></button>
-          <button class="setting-link" onclick="cyclePdfDirectionDefault()"><span class="sl-icon">↔</span><span class="sl-copy"><b>Comic direction</b><small>CBZ/CBR page order</small></span><span id="pdfDirectionBadge" class="settings-badge">L → R</span><span class="sl-arrow">›</span></button>
-        </div>
-      </div>
-      <div class="settings-group">
-        <div class="group-title">Library & Storage</div>
-        <div class="settings-card simple">
-          <button class="setting-link" onclick="chooseBooks()"><span class="sl-icon">＋</span><span class="sl-copy"><b>Add books</b><small>Uses the existing MyReader import flow</small></span><span class="settings-badge">EPUB/PDF/CBZ/CBR/TXT</span><span class="sl-arrow">›</span></button>
-          <div class="setting-link"><span class="sl-icon">✦</span><span class="sl-copy"><b>Read book metadata</b><small>Title, author and embedded cover</small></span><span class="settings-badge">On</span></div>
-          <button class="setting-link" onclick="showToast('Reading cache')"><span class="sl-icon">⌫</span><span class="sl-copy"><b>Reading cache</b><small>Temporary PDF and cover data</small></span><span class="settings-badge">Local</span><span class="sl-arrow">›</span></button>
-        </div>
-      </div>
-      <div class="settings-group">
-        <div class="group-title">Sync & backup</div>
-        <div class="settings-card simple" id="googleDriveSyncSettings">
-          <button class="setting-link" id="driveConnectBtn" type="button"><span class="sl-icon">☁</span><span class="sl-copy"><b>Google Drive folder</b><small id="driveSyncSubtitle">Choose a folder once</small></span><span id="driveSyncStatus" class="settings-badge">Offline</span><span class="sl-arrow">›</span></button>
-          <button class="setting-link" id="driveSyncNowBtn" type="button"><span class="sl-icon">↕</span><span class="sl-copy"><b>Sync now</b><small>Progress, notes, highlights & settings</small></span><span id="driveLastSync" class="settings-badge">Never synced</span><span class="sl-arrow">›</span></button>
-        </div>
-      </div>
-      <div class="settings-group">
-        <div class="group-title">About</div>
-        <div class="settings-card simple"><div class="setting-link"><span class="sl-icon">♡</span><span class="sl-copy"><b>MyReader</b><small>Full vNext prototype v8 · by vlafoor ♡</small></span><span class="settings-badge">Preview</span></div></div>
-      </div>
-    </div>
-    <nav class="bottomnav">
-      <button class="navitem" onclick="openScreen('library')"><span>▥</span>Library</button>
-      <button class="navitem" onclick="openScreen('stats')"><span>⌁</span>Stats</button>
-      <button class="navitem" onclick="openScreen('notes')"><span>▤</span>Notes</button>
-      <button class="navitem active"><span>⚙</span>Settings</button>
-    </nav>
-  </section>
-
-  '''
-          h = h[:settings_start] + v8_settings + h[reader_start:]
-
-          v8_css = r'''
-<style id="v8-reference-ui">
-:root{--bg:#deddd7;--paper:#fbfaf6;--ink:#20231f;--muted:#777a72;--line:#d8d6cf;--accent:#526f61;--accent-soft:#e4ece6;--chip:#efede6;--danger:#a24a43;--shadow:0 16px 38px rgba(35,42,37,.14)}
-html,body{margin:0!important;height:100%!important;overflow:hidden!important;background:var(--bg)!important;color:var(--ink)!important;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important}
-#app{width:100%!important;height:100dvh!important;min-height:0!important;margin:0!important;background:var(--paper)!important;position:relative!important;overflow:hidden!important}
-.screen{background:var(--paper)!important}
-.topbar{flex:0 0 auto!important;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important;padding:18px 16px 10px!important;background:var(--paper)!important;border-bottom:1px solid rgba(216,214,207,.85)!important;box-shadow:0 3px 8px rgba(32,35,31,.025)!important;z-index:60!important}
-.topbar h1{font:700 27px/1.05 Georgia,serif!important;letter-spacing:0!important;margin:0!important;display:flex!important;flex-direction:column!important;gap:3px!important}
-.topbar h1::before{content:'MYREADER';font:800 10px/1 Inter,system-ui,sans-serif!important;letter-spacing:.14em!important;color:var(--muted)!important}
-#stats .topbar h1::before{content:'READING'}
-.iconbtn{width:38px!important;height:38px!important;border:1px solid var(--line)!important;border-radius:12px!important;background:var(--paper)!important;display:grid!important;place-items:center!important;font-size:21px!important;line-height:1!important}
-.iconbtn:active{background:var(--chip)!important}
-.searchbox{position:relative!important;z-index:1!important;margin:12px 16px 8px!important;height:44px!important;border:1px solid var(--line)!important;border-radius:14px!important;background:#fff!important;display:flex!important;align-items:center!important;gap:9px!important;padding:0 12px!important;color:var(--muted)!important}
-.searchbox input{border:0!important;outline:0!important;min-width:0!important;flex:1!important;background:transparent!important;font-size:14px!important}
-.chips,.vnext-note-filters{display:flex!important;gap:7px!important;overflow:auto!important;padding:4px 16px 12px!important;scrollbar-width:none!important}
-.chip,.vnext-note-filters button{flex:0 0 auto!important;border:1px solid var(--line)!important;background:var(--paper)!important;border-radius:999px!important;padding:8px 12px!important;font-size:12px!important;font-weight:700!important;color:var(--ink)!important}
-.chip.active,.vnext-note-filters button.active{background:var(--ink)!important;border-color:var(--ink)!important;color:#fff!important}
-.scroll,.simple-scroll,.settings-scroll{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;overscroll-behavior:contain!important;-webkit-overflow-scrolling:touch!important;padding:0 16px 86px!important;background:var(--paper)!important}
-.section-label{font-size:14px!important;letter-spacing:.08em!important;text-transform:uppercase!important;color:var(--muted)!important;font-weight:800!important;margin:7px 0 9px!important}
-.continue-card{margin:0 0 17px!important;border:1px solid #cfd9d1!important;background:var(--accent-soft)!important;border-radius:17px!important;padding:12px!important;box-shadow:none!important}
-.continue-card .mini-cover{width:58px!important;height:80px!important;border-radius:7px!important}
-.continue-info h3{font-size:13px!important;margin:0 0 3px!important}.continue-info p{font-size:11px!important}.progress-line{height:5px!important}.progress-text{font-size:10px!important}
-.book-grid{display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:16px 11px!important;padding:0 0 26px!important}
-.cover-wrap{border-radius:9px!important;box-shadow:0 3px 8px rgba(0,0,0,.06)!important}.book-name{font-size:11px!important;margin:6px 0 2px!important;-webkit-line-clamp:2!important}.book-author{font-size:9px!important;margin-top:0!important}.book-progress{height:3px!important;margin-top:7px!important}
-.vnext-cover-progress{right:5px!important;top:5px!important;border-radius:6px!important;padding:3px 5px!important;font:700 9px Inter,sans-serif!important}.vnext-cover-format{right:5px!important;bottom:5px!important;border-radius:4px!important;padding:2px 4px!important;font:700 8px Inter,sans-serif!important}
-.bottomnav{position:absolute!important;left:0!important;right:0!important;bottom:0!important;height:70px!important;flex:0 0 70px!important;border-top:1px solid var(--line)!important;background:rgba(251,250,246,.99)!important;display:grid!important;grid-template-columns:repeat(4,1fr)!important;z-index:80!important;box-shadow:0 -4px 14px rgba(32,35,31,.04)!important}
-.navitem{border:0!important;background:transparent!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:3px!important;font-size:9px!important;color:var(--muted)!important;min-width:0!important}.navitem.active{color:var(--accent)!important;font-weight:800!important}.navitem span{font-size:19px!important;line-height:1!important;margin:0!important}
-.vnext-stats-scroll{padding:8px 16px 86px!important}.vnext-stats-summary{border:1px solid var(--line)!important;border-radius:17px!important;padding:15px 8px!important;background:#fff!important;display:grid!important;grid-template-columns:repeat(3,1fr)!important;margin:0!important}.vnext-stats-summary>div{text-align:center!important;border-right:1px solid var(--line)!important}.vnext-stats-summary>div:last-child{border-right:0!important}.vnext-stats-summary b{font:700 20px Georgia,serif!important;display:block!important}.vnext-stats-summary span{font-size:9px!important;color:var(--muted)!important}
-.vnext-period{display:flex!important;margin:15px 0 12px!important;padding:3px!important;border:1px solid var(--line)!important;border-radius:12px!important}.vnext-period button{flex:1!important;border:0!important;background:transparent!important;padding:9px!important;border-radius:9px!important;font-size:12px!important;font-weight:800!important}.vnext-period button.active{background:var(--ink)!important;color:#fff!important}
-.v8-date-row{display:flex!important;justify-content:center!important;align-items:center!important;gap:16px!important;margin:6px 0 14px!important;font-size:12px!important;font-weight:800!important}.v8-date-row button{border:0!important;background:transparent!important;font-size:19px!important;color:var(--muted)!important}
-.vnext-chart-card{border:1px solid var(--line)!important;border-radius:17px!important;background:#fff!important;padding:14px 12px!important}.vnext-chart{height:210px!important;display:flex!important;align-items:end!important;gap:5px!important;border-bottom:1px solid var(--line)!important;background:repeating-linear-gradient(to top,transparent 0,transparent 51px,#efeee9 52px)!important}.vnext-chart-meta{margin-top:31px!important;display:flex!important;justify-content:space-between!important;font-size:10px!important;color:var(--muted)!important}.vnext-insight{margin-top:12px!important;padding:12px!important;border-radius:13px!important;background:var(--accent-soft)!important;font-size:11px!important;line-height:1.45!important}
-#notesList{padding:0 16px 86px!important}.note-card{margin:0 0 11px!important;border:1px solid var(--line)!important;border-radius:15px!important;background:#fff!important;padding:12px!important}.note-card blockquote{margin:8px 0!important;font:15px/1.45 Georgia,serif!important}
-.settings-scroll{padding:5px 16px 86px!important}.settings-group{margin:12px 0 17px!important}.group-title{font-size:10px!important;text-transform:uppercase!important;letter-spacing:.13em!important;color:var(--muted)!important;margin:0 4px 7px!important;font-weight:800!important}.settings-card{margin:0!important;border:1px solid var(--line)!important;border-radius:16px!important;background:#fff!important;overflow:hidden!important}.setting-link{width:100%!important;min-height:58px!important;padding:10px 13px!important;display:flex!important;align-items:center!important;gap:11px!important;border:0!important;border-bottom:1px solid var(--line)!important;background:#fff!important;text-align:left!important}.setting-link:last-child{border-bottom:0!important}.sl-icon{width:32px!important;height:32px!important;border-radius:9px!important;background:var(--chip)!important;display:grid!important;place-items:center!important;flex:0 0 auto!important}.sl-copy{min-width:0!important;flex:1!important}.sl-copy b{display:block!important;font-size:13px!important}.sl-copy small{display:block!important;font-size:10px!important;color:var(--muted)!important;margin-top:2px!important}.settings-badge{font-size:11px!important;color:var(--muted)!important;white-space:nowrap!important;background:transparent!important;border:0!important;padding:0!important}.sl-arrow{color:var(--muted)!important;font-size:20px!important}
-#reader{background:#fbfaf6!important}
-.reader-head{flex:0 0 55px!important;height:55px!important;padding:7px 10px!important;display:flex!important;align-items:center!important;justify-content:center!important;border-bottom:1px solid var(--line)!important;background:var(--paper)!important;position:relative!important;z-index:35!important}
-.reader-head-left{position:absolute!important;left:9px!important;top:7px!important;height:40px!important;display:flex!important;align-items:center!important;gap:7px!important;min-width:0!important}.reader-head-left .iconbtn{width:38px!important;height:38px!important;border:0!important;background:transparent!important;font-size:25px!important}.reader-device-info{display:flex!important;align-items:center!important;gap:6px!important;font:700 8px/1 Inter,system-ui!important;color:var(--muted)!important;white-space:nowrap!important}.reader-head .bookhead{position:static!important;transform:none!important;width:min(58%,230px)!important;max-width:min(58%,230px)!important;text-align:center!important;font:700 13px Georgia,serif!important;color:var(--ink)!important;pointer-events:none!important}
-.vnext-reader-footer{flex:0 0 101px!important;height:101px!important;display:block!important;padding:0!important;border:0!important;background:var(--paper)!important;opacity:1!important}
-.vnext-progress-pill{position:absolute!important;left:11px!important;right:11px!important;bottom:69px!important;height:32px!important;border:1px solid var(--line)!important;border-radius:12px!important;background:rgba(251,250,246,.97)!important;display:flex!important;align-items:center!important;gap:8px!important;padding:8px 9px!important;font:9px Inter,sans-serif!important;color:var(--muted)!important}.vnext-progress-line{flex:1!important;height:4px!important;background:rgba(0,0,0,.12)!important}
-.vnext-reader-tools{position:absolute!important;left:0!important;right:0!important;bottom:0!important;height:69px!important;background:var(--paper)!important;border-top:1px solid var(--line)!important;display:grid!important;grid-template-columns:repeat(6,1fr)!important;z-index:29!important}.vnext-reader-tools button{border:0!important;background:transparent!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:3px!important;font-size:7px!important;color:var(--muted)!important;padding:0!important}.vnext-reader-tools button span{font-size:18px!important;line-height:1!important;color:var(--ink)!important}
-.reader-page{flex:1!important;min-height:0!important;padding:22px 21px 28px!important;font-family:var(--reader-family,Georgia,"Times New Roman",serif)!important;font-size:var(--reader-font,17px)!important;line-height:var(--reader-line,1.7)!important;background:#fbfaf6!important;color:var(--reader-ink,#20231f)!important}
-#reader.chrome-hidden .reader-head{flex:0 0 55px!important;height:55px!important;padding:7px 10px!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important;transform:none!important}
-#reader.chrome-hidden .vnext-reader-footer{flex:0 0 101px!important;height:101px!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important}
-#reader.chrome-hidden .reader-page{padding-top:22px!important;padding-bottom:28px!important}
-.vnext-sheet-backdrop{background:rgba(30,32,29,.34)!important}.vnext-sheet{background:var(--paper)!important;border-radius:20px 20px 0 0!important;border-top:1px solid var(--line)!important;box-shadow:0 -16px 35px rgba(0,0,0,.14)!important;max-height:72vh!important;padding:0!important}.vnext-sheet-head{position:sticky!important;top:0!important;background:var(--paper)!important;padding:13px 15px 10px!important;border-bottom:1px solid var(--line)!important;margin:0!important}.vnext-sheet-head b{font-size:14px!important}.vnext-sheet-close{width:30px!important;height:30px!important;border:1px solid var(--line)!important;border-radius:10px!important;background:var(--paper)!important;font-size:17px!important}
-</style>
-'''
-          # Put original vNext functional styles first, then v8 final overrides last.
           real_head_end = h.find('</head>')
           real_body = h.find('<body')
-          assert 0 <= real_head_end < real_body
-          h = h[:real_head_end] + style_block + '\n' + v8_css + '\n' + h[real_head_end:]
-          h = re.sub(r'^(?:\\n)+', '', h)
+          assert 0 <= real_head_end < real_body, 'Real document head not found'
+          h = h[:real_head_end] + style_block + chr(10) + h[real_head_end:]
+          viewport_fix = '<style id="vnext-viewport-fix">html,body{min-height:100%;height:auto;overflow-x:hidden}body{padding-bottom:96px!important}#library,#stats,#notes,#settings{min-height:calc(100vh - 84px);padding-bottom:116px!important;box-sizing:border-box}#reader{height:100vh!important;min-height:100vh!important;box-sizing:border-box}#reader .reader-body,#readerBody{padding-bottom:136px!important;box-sizing:border-box}.bottom-nav,.bottomnav,#bottomNav{position:fixed!important;left:0;right:0;bottom:0;z-index:120}#reader.chrome-hidden .reader-head{flex:0 0 62px!important;height:auto!important;min-height:0!important;padding:10px 12px 8px!important;border-bottom:1px solid transparent!important;overflow:visible!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important}#reader.chrome-hidden .reader-footer{flex:0 0 46px!important;height:auto!important;min-height:0!important;padding:7px 14px 12px!important;border:0!important;overflow:visible!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important}</style>'
+          real_head_end = h.find('</head>')
+          h = h[:real_head_end] + viewport_fix + chr(10) + h[real_head_end:]
+          h = re.sub(r'^(?:\\\\n)+', '', h)
+          Path('app/src/main/assets/index.html').write_text(h, encoding='utf-8')
 
-          # Keep the preview package separate, but make this a clearly new v8 build.
-          gradle = Path('app/build.gradle')
-          g = gradle.read_text(encoding='utf-8')
-          g = re.sub(r'versionCode\s+\d+', 'versionCode 31', g, count=1)
-          g = re.sub(r"versionName\s+['\"][^'\"]+['\"]", "versionName '0.3.6-v8-ui'", g, count=1)
-          gradle.write_text(g, encoding='utf-8')
+          # Validate only the requested vNext UI additions while preserving the existing app.
+          required = [
+              'id="stats"', 'Reading Stats', 'Book flip', 'vnext-preview-js'
+          ]
+          for marker in required:
+              assert marker in h, f'Missing targeted vNext marker: {marker}'
 
-          p.write_text(h, encoding='utf-8')
+          style_pos = h.find('<style id="vnext-preview-css">')
+          assert 0 <= style_pos < h.find('<body'), 'vNext stylesheet is not in the real document head'
+          assert '#readerSettingsBtn{display:none!important}' in h, 'Legacy Aa button is not hidden'
+          assert 'class="iconbtn vnext-reader-back"' in h and '>‹</button>' in h, 'Reader back button is not the approved one'
+          assert 'vnext-sheet-backdrop' in h and 'vnext-stats-summary' in h and 'vnext-note-filters' in h, 'Approved prototype layout CSS missing'
+          assert not h.startswith('\\\\n'), 'Literal newline marker leaked into page'
+          assert 'id="vnext-viewport-fix"' in h, 'Viewport fix missing'
+          assert '#reader.chrome-hidden .reader-head{flex:0 0 62px!important' in h, 'Stable reader header height fix missing'
+          assert '#reader.chrome-hidden .reader-footer{flex:0 0 46px!important' in h, 'Stable reader footer height fix missing'
 
-          # Build-time guardrails: v8 owns the UI, demo content must not leak into the APK.
-          assert 'id="v8-reference-ui"' in h
-          assert 'Full vNext prototype v8' in h
-          assert '<span>▤</span>Notes' in h
-          assert '#reader.chrome-hidden .reader-head{flex:0 0 55px!important' in h
-          assert 'vnext-sheet-backdrop' in h and 'vnext-stats-summary' in h and 'vnext-note-filters' in h
-          for demo in ['The Quiet Edge','Ubur-Ubur Lembur','Teka-Teki Gambar Aneh','Makhluk Bumi','Catatan Pembunuhan','The Let Them Theory','Sapiens']:
+          # Preview must start empty; no prototype/demo books may leak in.
+          for demo in [
+              'The Quiet Edge','Ubur-Ubur Lembur','Teka-Teki Gambar Aneh',
+              'Makhluk Bumi','Catatan Pembunuhan','The Let Them Theory','Sapiens'
+          ]:
               assert demo not in h, f'Demo book leaked into APK: {demo}'
 
-          blocks = [m.group(2) for m in re.finditer(r'<script([^>]*)>(.*?)</script>', h, re.S)
-                    if 'src=' not in m.group(1) and m.group(2).strip()]
+          blocks = [
+              m.group(2)
+              for m in re.finditer(r'<script([^>]*)>(.*?)</script>', h, re.S)
+              if 'src=' not in m.group(1) and m.group(2).strip()
+          ]
+          assert blocks, 'No inline JS found after targeted patch'
           for i, block in enumerate(blocks):
-              Path(f'/tmp/v8-ui-{i}.js').write_text(block, encoding='utf-8')
+              Path(f'/tmp/vnext-targeted-{i}.js').write_text(block, encoding='utf-8')
+
+          gradle = Path('app/build.gradle')
+          g = gradle.read_text(encoding='utf-8')
+          g = re.sub(r'versionCode\s+\d+', 'versionCode 30', g, count=1)
+          g = re.sub(r"versionName\s+['\"][^'\"]+['\"]",
+                     "versionName '0.3.5-stable-pages'", g, count=1)
+          gradle.write_text(g, encoding='utf-8')
           PY
 
-          for js in /tmp/v8-ui-*.js; do node --check "$js"; done
+          for js in /tmp/vnext-targeted-*.js; do node --check "$js"; done
           node --check app/src/main/assets/drive-sync.js
           grep -q "applicationId 'com.myreader.app.vnextpreview'" app/build.gradle
+          grep -q "versionCode 30" app/build.gradle
+          grep -q "versionName '0.3.5-stable-pages'" app/build.gradle
+          grep -q 'android:label="MyReader Preview"' app/src/main/AndroidManifest.xml
+
+      - name: Apply approved v8 reference UI
+        shell: bash
+        run: |
+          python .github/apply_v8_ui.py
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          h=Path('app/src/main/assets/index.html').read_text(encoding='utf-8')
+          assert 'id="v8-reference-ui"' in h
+          blocks=[m.group(2) for m in re.finditer(r'<script([^>]*)>(.*?)</script>',h,re.S) if 'src=' not in m.group(1) and m.group(2).strip()]
+          for i,b in enumerate(blocks):
+              Path(f'/tmp/v8-final-{i}.js').write_text(b,encoding='utf-8')
+          PY
+          for js in /tmp/v8-final-*.js; do node --check "$js"; done
           grep -q "versionCode 31" app/build.gradle
           grep -q "versionName '0.3.6-v8-ui'" app/build.gradle
-          grep -q 'android:label="MyReader Preview"' app/src/main/AndroidManifest.xml
 
       - name: Upload final v0.2 source
         uses: actions/upload-artifact@v4
