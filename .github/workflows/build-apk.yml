@@ -353,7 +353,7 @@ jobs:
               'id="library"', 'id="stats"', 'id="notes"', 'id="settings"',
               'id="reader"', 'id="formatSheet"', 'id="selectionToolbar"',
               'Reading Stats', 'Page turn effect', 'Book flip',
-              'Page Display', 'Crop', 'Split view', 'Go to page',
+              'Page display', 'Crop', 'Split view', 'Go to page',
               'chooseBooks()', 'openBook(', 'readerAction(',
               'Google Drive folder'
           ]
