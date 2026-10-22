@@ -339,7 +339,15 @@ jobs:
       - name: Apply vNext preview UI and isolated empty package
         shell: bash
         run: |
-          base64 -d .github/vnextpreview/patch.b64 | gzip -d > /tmp/patch_vnext_preview.py
+          python - <<'PY'
+          from pathlib import Path
+          import base64, gzip, hashlib
+          b=Path('.github/vnextpreview/patch.b64').read_bytes()
+          raw=base64.b64decode(b, validate=True)
+          print('VNEXT_GZIP_SHA256='+hashlib.sha256(raw).hexdigest())
+          assert hashlib.sha256(raw).hexdigest() == '3300e99b861a6387ab0f6590a28e78296ed1b2cd9886963ddfafdcf3d1d983bb'
+          Path('/tmp/patch_vnext_preview.py').write_bytes(gzip.decompress(raw))
+          PY
           python /tmp/patch_vnext_preview.py
           python - <<'PY'
           from pathlib import Path
