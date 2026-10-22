@@ -363,7 +363,7 @@ jobs:
           real_body = h.find('<body')
           assert 0 <= real_head_end < real_body, 'Real document head not found'
           h = h[:real_head_end] + style_block + chr(10) + h[real_head_end:]
-          viewport_fix = '<style id="vnext-viewport-fix">html,body{min-height:100%;height:auto;overflow-x:hidden}body{padding-bottom:96px!important}#library,#stats,#notes,#settings{min-height:calc(100vh - 84px);padding-bottom:116px!important;box-sizing:border-box}#reader{height:100vh!important;min-height:100vh!important;box-sizing:border-box}#reader .reader-body,#readerBody{padding-bottom:136px!important;box-sizing:border-box}.bottom-nav,.bottomnav,#bottomNav{position:fixed!important;left:0;right:0;bottom:0;z-index:120}</style>'
+          viewport_fix = '<style id="vnext-viewport-fix">html,body{min-height:100%;height:auto;overflow-x:hidden}body{padding-bottom:96px!important}#library,#stats,#notes,#settings{min-height:calc(100vh - 84px);padding-bottom:116px!important;box-sizing:border-box}#reader{height:100vh!important;min-height:100vh!important;box-sizing:border-box}#reader .reader-body,#readerBody{padding-bottom:136px!important;box-sizing:border-box}.bottom-nav,.bottomnav,#bottomNav{position:fixed!important;left:0;right:0;bottom:0;z-index:120}#reader.chrome-hidden .reader-head{flex:0 0 62px!important;height:auto!important;min-height:0!important;padding:10px 12px 8px!important;border-bottom:1px solid transparent!important;overflow:visible!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important}#reader.chrome-hidden .reader-footer{flex:0 0 46px!important;height:auto!important;min-height:0!important;padding:7px 14px 12px!important;border:0!important;overflow:visible!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important}</style>'
           real_head_end = h.find('</head>')
           h = h[:real_head_end] + viewport_fix + chr(10) + h[real_head_end:]
           h = re.sub(r'^(?:\\\\n)+', '', h)
@@ -383,6 +383,8 @@ jobs:
           assert 'vnext-sheet-backdrop' in h and 'vnext-stats-summary' in h and 'vnext-note-filters' in h, 'Approved prototype layout CSS missing'
           assert not h.startswith('\\\\n'), 'Literal newline marker leaked into page'
           assert 'id="vnext-viewport-fix"' in h, 'Viewport fix missing'
+          assert '#reader.chrome-hidden .reader-head{flex:0 0 62px!important' in h, 'Stable reader header height fix missing'
+          assert '#reader.chrome-hidden .reader-footer{flex:0 0 46px!important' in h, 'Stable reader footer height fix missing'
 
           # Preview must start empty; no prototype/demo books may leak in.
           for demo in [
@@ -402,17 +404,17 @@ jobs:
 
           gradle = Path('app/build.gradle')
           g = gradle.read_text(encoding='utf-8')
-          g = re.sub(r'versionCode\s+\d+', 'versionCode 29', g, count=1)
+          g = re.sub(r'versionCode\s+\d+', 'versionCode 30', g, count=1)
           g = re.sub(r"versionName\s+['\"][^'\"]+['\"]",
-                     "versionName '0.3.4-layout-fix'", g, count=1)
+                     "versionName '0.3.5-stable-pages'", g, count=1)
           gradle.write_text(g, encoding='utf-8')
           PY
 
           for js in /tmp/vnext-targeted-*.js; do node --check "$js"; done
           node --check app/src/main/assets/drive-sync.js
           grep -q "applicationId 'com.myreader.app.vnextpreview'" app/build.gradle
-          grep -q "versionCode 29" app/build.gradle
-          grep -q "versionName '0.3.4-layout-fix'" app/build.gradle
+          grep -q "versionCode 30" app/build.gradle
+          grep -q "versionName '0.3.5-stable-pages'" app/build.gradle
           grep -q 'android:label="MyReader Preview"' app/src/main/AndroidManifest.xml
 
       - name: Upload final v0.2 source
@@ -454,16 +456,16 @@ jobs:
 
       - name: Copy APK and signing fingerprint
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk MyReader-v0.3.4-Layout-Fix.apk
-          $ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner verify --print-certs MyReader-v0.3.4-Layout-Fix.apk > signing.txt
+          cp app/build/outputs/apk/debug/app-debug.apk MyReader-v0.3.5-Stable-Pages.apk
+          $ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner verify --print-certs MyReader-v0.3.5-Stable-Pages.apk > signing.txt
           cat signing.txt
           grep -qi "b5e67f14e8e6e7ee7593cc1a18e6972dfac7058c" signing.txt
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MyReader-v0.3.4-Layout-Fix
+          name: MyReader-v0.3.5-Stable-Pages
           path: |
-            MyReader-v0.3.4-Layout-Fix.apk
+            MyReader-v0.3.5-Stable-Pages.apk
             signing.txt
           retention-days: 30
