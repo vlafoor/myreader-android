@@ -64,7 +64,21 @@ h=h.replace('<button onclick="toggleReaderNav()"><span>☰</span>Contents</butto
 js=r'''
 <script id="v045-reader-tool-fix-js">
 (function(){
-  function sheet(title,body){openSheet(title,body)}
+  function sheet(title,body){
+    const r=document.getElementById('reader');if(!r)return;
+    let b=document.getElementById('vnextSheetBackdrop');
+    if(!b){
+      b=document.createElement('div');b.id='vnextSheetBackdrop';b.className='vnext-sheet-backdrop';
+      b.innerHTML='<div class="vnext-sheet"><div class="vnext-sheet-head"><b id="vnextSheetTitle"></b><button class="vnext-sheet-close" onclick="vnextCloseSheet()">×</button></div><div id="vnextSheetBody"></div></div>';
+      b.addEventListener('click',function(e){if(e.target===b)vnextCloseSheet()});
+      r.appendChild(b);
+    }
+    b.querySelector('.vnext-sheet').onclick=function(e){e.stopPropagation()};
+    const t=document.getElementById('vnextSheetTitle'),x=document.getElementById('vnextSheetBody');
+    if(t)t.textContent=title;if(x)x.innerHTML=body;
+    b.classList.add('show');b.style.display='flex';b.style.pointerEvents='auto';
+    try{setReaderChromeVisible(true)}catch(_){}
+  }
   function esc45(v){return escapeHtml(String(v==null?'':v))}
   function currentExt(){return currentBook&&currentBook.ext||''}
 
