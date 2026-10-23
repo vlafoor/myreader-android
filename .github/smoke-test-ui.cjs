@@ -143,6 +143,28 @@ function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
 
   console.log('MYREADER_READER_TOOL_SMOKE_TEST_PASS');
 
+  // Library card rendering gate: real card contents must exist, not badges-only shells.
+  await w.addOne({title:'Visible EPUB Book',author:'Author One',cover:'',ext:'epub',addedAt:Date.now()+1,progress:.16,finished:false,bookmark:false});
+  await w.addOne({title:'Visible PDF Book',author:'Author Two',cover:'',ext:'pdf',addedAt:Date.now()+2,progress:.04,finished:false,bookmark:false});
+  await w.renderLibrary();
+  await sleep(80);
+  const cards=[...d.querySelectorAll('#bookGrid .book-card')];
+  if(cards.length<2) throw new Error('Library did not render book cards');
+  const cardText=cards.map(c=>c.textContent||'').join(' | ');
+  if(!/Visible EPUB Book/.test(cardText)||!/Visible PDF Book/.test(cardText)) throw new Error('Library book titles are missing');
+  if(!/Author One/.test(cardText)||!/Author Two/.test(cardText)) throw new Error('Library authors are missing');
+  for(const c of cards.slice(0,2)){
+    if(!c.querySelector('.cover-wrap')) throw new Error('Library cover wrapper missing');
+    if(!c.querySelector('.cover-placeholder, .cover-wrap img')) throw new Error('Library visible cover/placeholder missing');
+    if(!c.querySelector('.book-name')) throw new Error('Library book-name element missing');
+    if(!c.querySelector('.book-author')) throw new Error('Library book-author element missing');
+    if(!c.querySelector('.vnext-cover-format')) throw new Error('Library format badge missing');
+  }
+  const htmlFinal=d.documentElement.innerHTML;
+  if(!htmlFinal.includes('v046-library-recovery')) throw new Error('Library recovery CSS missing from final DOM');
+  console.log('MYREADER_LIBRARY_RENDER_SMOKE_TEST_PASS');
+
+
   if(errors.length) console.log('JSDOM_WARNINGS',JSON.stringify(errors.slice(0,10)));
   console.log('MYREADER_UI_SMOKE_TEST_PASS');
   console.log(JSON.stringify(result));
