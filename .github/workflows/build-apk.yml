@@ -442,13 +442,6 @@ jobs:
           grep -q 'versionCode 40' app/build.gradle
           grep -q "versionName '0.4.5-reader-tools'" app/build.gradle
 
-      - name: Recover Library visual structure
-        shell: bash
-        run: |
-          python .github/fix_v046_library.py
-          grep -q 'versionCode 41' app/build.gradle
-          grep -q "versionName '0.4.6-library-recovery'" app/build.gradle
-
       - name: Repair Library rendering
         shell: bash
         run: |
