@@ -161,7 +161,7 @@ function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
     if(!c.querySelector('.vnext-cover-format')) throw new Error('Library format badge missing');
   }
   const htmlFinal=d.documentElement.innerHTML;
-  if(!htmlFinal.includes('v046-library-recovery')) throw new Error('Library recovery CSS missing from final DOM');
+  if(!htmlFinal.includes('v046-library-repair')) throw new Error('Library repair CSS missing from final DOM');
   console.log('MYREADER_LIBRARY_RENDER_SMOKE_TEST_PASS');
 
 
