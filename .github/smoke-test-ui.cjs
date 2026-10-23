@@ -54,7 +54,8 @@ function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
 
   // Verify actual clickable elements, not helper-only functions.
   const clickAndExpect=(label,id)=>{
-    const btn=[...d.querySelectorAll('.navitem')].find(x=>x.textContent.includes(label));
+    const activeScreen=d.querySelector('.screen.active');
+    const btn=[...(activeScreen?.querySelectorAll('.navitem')||[])].find(x=>x.textContent.includes(label));
     if(!btn) throw new Error('Missing nav button '+label);
     btn.click();
     const ok=d.getElementById(id).classList.contains('active');
