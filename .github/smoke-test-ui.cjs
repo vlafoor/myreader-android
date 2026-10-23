@@ -148,12 +148,12 @@ function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
   await w.addOne({title:'Visible PDF Book',author:'Author Two',cover:'',ext:'pdf',addedAt:Date.now()+2,progress:.04,finished:false,bookmark:false});
   await w.renderLibrary();
   await sleep(80);
-  const cards=[...d.querySelectorAll('#bookGrid .book-card')];
-  if(cards.length<2) throw new Error('Library did not render book cards');
-  const cardText=cards.map(c=>c.textContent||'').join(' | ');
+  const libraryCards=[...d.querySelectorAll('#bookGrid .book-card')];
+  if(libraryCards.length<2) throw new Error('Library did not render book cards');
+  const cardText=libraryCards.map(c=>c.textContent||'').join(' | ');
   if(!/Visible EPUB Book/.test(cardText)||!/Visible PDF Book/.test(cardText)) throw new Error('Library book titles are missing');
   if(!/Author One/.test(cardText)||!/Author Two/.test(cardText)) throw new Error('Library authors are missing');
-  for(const c of cards.slice(0,2)){
+  for(const c of libraryCards.slice(0,2)){
     if(!c.querySelector('.cover-wrap')) throw new Error('Library cover wrapper missing');
     if(!c.querySelector('.cover-placeholder, .cover-wrap img')) throw new Error('Library visible cover/placeholder missing');
     if(!c.querySelector('.book-name')) throw new Error('Library book-name element missing');
