@@ -435,6 +435,13 @@ jobs:
           grep -q "play-services-mlkit-text-recognition:19.0.1" app/build.gradle
           grep -q "abiFilters 'arm64-v8a'" app/build.gradle
 
+      - name: Fix reader toolbar routing and format controls
+        shell: bash
+        run: |
+          python .github/fix_v045_reader_tools.py
+          grep -q 'versionCode 40' app/build.gradle
+          grep -q "versionName '0.4.5-reader-tools'" app/build.gradle
+
       - name: Validate final JavaScript and UI functions
         shell: bash
         run: |
@@ -503,16 +510,16 @@ jobs:
 
       - name: Copy APK and signing fingerprint
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk MyReader-v0.4.4-Approved-v8-ARM64.apk
-          $ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner verify --print-certs MyReader-v0.4.4-Approved-v8-ARM64.apk > signing.txt
+          cp app/build/outputs/apk/debug/app-debug.apk MyReader-v0.4.5-Reader-Tools-ARM64.apk
+          $ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner verify --print-certs MyReader-v0.4.5-Reader-Tools-ARM64.apk > signing.txt
           cat signing.txt
           grep -qi "b5e67f14e8e6e7ee7593cc1a18e6972dfac7058c" signing.txt
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MyReader-v0.4.4-Approved-v8-ARM64
+          name: MyReader-v0.4.5-Reader-Tools-ARM64
           path: |
-            MyReader-v0.4.4-Approved-v8-ARM64.apk
+            MyReader-v0.4.5-Reader-Tools-ARM64.apk
             signing.txt
           retention-days: 30
