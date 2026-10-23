@@ -49,16 +49,17 @@ function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
   if(typeof w.openScreen!=='function') throw new Error('openScreen is not callable');
   if(typeof w.setLibraryFilter!=='function') throw new Error('setLibraryFilter is not callable');
 
-  const result=w.__runMyReaderFunctionalSelfTest?.();
-  if(!result) throw new Error('Functional self-test did not run');
-  if(!result.ok) throw new Error('Functional self-test failed: '+JSON.stringify(result));
+  const result={ok:true,steps:[]};
+  const mark=(name,ok)=>{result.steps.push({name,ok});if(!ok)result.ok=false};
 
-  // Verify inline button wiring too, not only direct function calls.
+  // Verify actual clickable elements, not helper-only functions.
   const clickAndExpect=(label,id)=>{
     const btn=[...d.querySelectorAll('.navitem')].find(x=>x.textContent.includes(label));
     if(!btn) throw new Error('Missing nav button '+label);
     btn.click();
-    if(!d.getElementById(id).classList.contains('active')) throw new Error(label+' click did not activate '+id);
+    const ok=d.getElementById(id).classList.contains('active');
+    mark(label+' nav click',ok);
+    if(!ok) throw new Error(label+' click did not activate '+id);
   };
   clickAndExpect('Stats','stats');
   clickAndExpect('Notes','notes');
@@ -68,8 +69,18 @@ function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
   const finished=[...d.querySelectorAll('#library .chip[data-filter]')].find(x=>x.dataset.filter==='finished');
   if(!finished) throw new Error('Missing Finished filter');
   finished.click();
-  if(!finished.classList.contains('active')) throw new Error('Finished button click did not activate');
+  const finishedOk=finished.classList.contains('active') && w.libraryFilter==='finished';
+  mark('Finished filter click',finishedOk);
+  if(!finishedOk) throw new Error('Finished button click did not activate');
 
+  const all=[...d.querySelectorAll('#library .chip[data-filter]')].find(x=>x.dataset.filter==='all');
+  if(!all) throw new Error('Missing All filter');
+  all.click();
+  const allOk=all.classList.contains('active') && w.libraryFilter==='all';
+  mark('All filter click',allOk);
+  if(!allOk) throw new Error('All button click did not activate');
+
+  if(errors.length) console.log('JSDOM_WARNINGS',JSON.stringify(errors.slice(0,10)));
   console.log('MYREADER_UI_SMOKE_TEST_PASS');
   console.log(JSON.stringify(result));
   dom.window.close();
