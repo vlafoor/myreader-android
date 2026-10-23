@@ -426,6 +426,15 @@ jobs:
           grep -q "versionName '0.4.3-pdf-reader'" app/build.gradle
           grep -q "com.google.mlkit:text-recognition:16.0.1" app/build.gradle
 
+      - name: Apply approved v8 shell and compact build
+        shell: bash
+        run: |
+          python .github/fix_v044_approved_v8.py
+          grep -q 'versionCode 39' app/build.gradle
+          grep -q "versionName '0.4.4-approved-v8'" app/build.gradle
+          grep -q "play-services-mlkit-text-recognition:19.0.1" app/build.gradle
+          grep -q "abiFilters 'arm64-v8a'" app/build.gradle
+
       - name: Validate final JavaScript and UI functions
         shell: bash
         run: |
@@ -494,16 +503,16 @@ jobs:
 
       - name: Copy APK and signing fingerprint
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk MyReader-v0.4.3-Approved-Reader.apk
-          $ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner verify --print-certs MyReader-v0.4.3-Approved-Reader.apk > signing.txt
+          cp app/build/outputs/apk/debug/app-debug.apk MyReader-v0.4.4-Approved-v8-ARM64.apk
+          $ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner verify --print-certs MyReader-v0.4.4-Approved-v8-ARM64.apk > signing.txt
           cat signing.txt
           grep -qi "b5e67f14e8e6e7ee7593cc1a18e6972dfac7058c" signing.txt
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MyReader-v0.4.3-Approved-Reader
+          name: MyReader-v0.4.4-Approved-v8-ARM64
           path: |
-            MyReader-v0.4.3-Approved-Reader.apk
+            MyReader-v0.4.4-Approved-v8-ARM64.apk
             signing.txt
           retention-days: 30
