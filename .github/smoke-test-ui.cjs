@@ -83,6 +83,32 @@ function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
 
   await sleep(700);
 
+
+  // Library visual recovery: seed real IndexedDB rows and verify visible card structure.
+  await w.addOne({title:'Visible EPUB',author:'Author One',ext:'epub',progress:.16,addedAt:2,cover:''});
+  await w.addOne({title:'Visible PDF',author:'Author Two',ext:'pdf',progress:.04,addedAt:1,cover:''});
+  w.openScreen('library');
+  await w.renderLibrary();
+  await sleep(120);
+  const search=d.querySelector('#library>.searchbox');
+  const chips=d.querySelector('#library>.chips');
+  if(!search || !chips) throw new Error('Library search/filter structure missing');
+  const searchStyle=w.getComputedStyle(search),chipsStyle=w.getComputedStyle(chips);
+  if(searchStyle.display==='none'||searchStyle.visibility==='hidden'||searchStyle.opacity==='0') throw new Error('Library search hidden');
+  if(chipsStyle.display==='none'||chipsStyle.visibility==='hidden'||chipsStyle.opacity==='0') throw new Error('Library filters hidden');
+  const cards=[...d.querySelectorAll('#bookGrid .book-card')];
+  if(cards.length<2) throw new Error('Library book cards did not render');
+  for(const card of cards.slice(0,2)){
+    const cover=card.querySelector('.cover-wrap'),name=card.querySelector('.book-name'),author=card.querySelector('.book-author');
+    if(!cover||!name||!author) throw new Error('Library card content missing');
+    for(const el of [cover,name,author]){
+      const st=w.getComputedStyle(el);
+      if(st.display==='none'||st.visibility==='hidden'||st.opacity==='0') throw new Error('Library card content hidden: '+el.className);
+    }
+    if(!name.textContent.trim()) throw new Error('Library title empty');
+  }
+  console.log('MYREADER_LIBRARY_VISUAL_SMOKE_TEST_PASS');
+
   // Reader toolbar routing + functional Format checks.
   w.eval("currentBook={ext:'pdf',title:'Test PDF'}; pdfState={page:12,count:308,doc:null,viewMode:'page',cropMode:'auto',zoom:1,margin:0};");
   await w.v045OpenContents();
