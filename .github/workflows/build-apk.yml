@@ -404,17 +404,17 @@ jobs:
 
           gradle = Path('app/build.gradle')
           g = gradle.read_text(encoding='utf-8')
-          g = re.sub(r'versionCode\s+\d+', 'versionCode 37', g, count=1)
+          g = re.sub(r'versionCode\s+\d+', 'versionCode 38', g, count=1)
           g = re.sub(r"versionName\s+['\"][^'\"]+['\"]",
-                     "versionName '0.4.2-clickable-baseline'", g, count=1)
+                     "versionName '0.4.3-approved-ui'", g, count=1)
           gradle.write_text(g, encoding='utf-8')
           PY
 
           for js in /tmp/vnext-targeted-*.js; do node --check "$js"; done
           node --check app/src/main/assets/drive-sync.js
           grep -q "applicationId 'com.myreader.app.vnextpreview'" app/build.gradle
-          grep -q "versionCode 37" app/build.gradle
-          grep -q "versionName '0.4.2-clickable-baseline'" app/build.gradle
+          grep -q "versionCode 38" app/build.gradle
+          grep -q "versionName '0.4.3-approved-ui'" app/build.gradle
           grep -q 'android:label="MyReader Preview"' app/src/main/AndroidManifest.xml
 
       - name: Apply approved Format PDF and import layout
@@ -434,6 +434,30 @@ jobs:
           g=gradle.read_text(encoding='utf-8')
           g=re.sub(r'versionCode\s+\d+','versionCode 38',g,count=1)
           g=re.sub(r"versionName\s+['\"][^'\"]+['\"]","versionName '0.4.3-approved-reader'",g,count=1)
+          gradle.write_text(g,encoding='utf-8')
+          PY
+
+      - name: Apply approved PDF, Format, and import fixes
+        shell: bash
+        run: |
+          python .github/fix_v043_approved_ui.py
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          h=Path('app/src/main/assets/index.html').read_text(encoding='utf-8')
+          assert 'id="v043-approved-reader-fixes"' in h
+          assert 'id="v043-approved-reader-fixes-js"' in h
+          assert "openSheet('Format',html)" in h
+          for marker in ['Page display','Zoom','Crop','Leave blank space']:
+              assert marker in h, marker+' missing from approved Format sheet'
+          assert '#pdfControls{display:none!important}' in h
+          assert "#reader.pdf-mode .vnext-reader-footer{display:block!important}" in h
+          assert "#importOverlay #importReviewList" in h and "overflow-y:auto!important" in h
+          assert "viewMode:localStorage.getItem('pdfViewMode_v1')||'crop'" in h
+          gradle=Path('app/build.gradle')
+          g=gradle.read_text(encoding='utf-8')
+          g=re.sub(r'versionCode\s+\d+','versionCode 38',g,count=1)
+          g=re.sub(r"versionName\s+['\"][^'\"]+['\"]","versionName '0.4.3-approved-ui'",g,count=1)
           gradle.write_text(g,encoding='utf-8')
           PY
 
