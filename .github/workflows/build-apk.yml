@@ -461,6 +461,15 @@ jobs:
           gradle.write_text(g,encoding='utf-8')
           PY
 
+      - name: Apply advanced PDF reader and layout fixes
+        shell: bash
+        run: |
+          base64 -d .github/fix_v043_pdf_reader.py.gz.b64 | gzip -d > /tmp/fix_v043_pdf_reader.py
+          python /tmp/fix_v043_pdf_reader.py
+          grep -q 'versionCode 38' app/build.gradle
+          grep -q "versionName '0.4.3-pdf-reader'" app/build.gradle
+          grep -q "com.google.mlkit:text-recognition:16.0.1" app/build.gradle
+
       - name: Validate final JavaScript and UI functions
         shell: bash
         run: |
