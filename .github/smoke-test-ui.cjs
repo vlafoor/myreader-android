@@ -81,8 +81,9 @@ function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
   mark('All filter click',allOk);
   if(!allOk) throw new Error('All button click did not activate');
 
+  await sleep(700);
   if(errors.length) console.log('JSDOM_WARNINGS',JSON.stringify(errors.slice(0,10)));
   console.log('MYREADER_UI_SMOKE_TEST_PASS');
   console.log(JSON.stringify(result));
-  dom.window.close();
+  process.exit(0);
 })().catch(e=>{console.error(e.stack||e);process.exit(1)});
