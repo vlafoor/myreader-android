@@ -82,6 +82,41 @@ function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
   if(!allOk) throw new Error('All button click did not activate');
 
   await sleep(700);
+
+  // Reader toolbar routing + functional Format checks.
+  w.eval("currentBook={ext:'pdf',title:'Test PDF'}; pdfState={page:12,count:308,doc:null,viewMode:'page',cropMode:'auto',zoom:1,margin:0};");
+  await w.v045OpenContents();
+  await sleep(40);
+  let sheetTitle=d.getElementById('vnextSheetTitle')?.textContent||'';
+  let sheetBody=d.getElementById('vnextSheetBody')?.textContent||'';
+  if(sheetTitle!=='Contents') throw new Error('PDF Contents did not open Contents sheet');
+  if(/Go to page/i.test(sheetBody)) throw new Error('PDF Contents incorrectly routed to Go to page');
+
+  w.vnextOpenNavigate();
+  await sleep(20);
+  sheetTitle=d.getElementById('vnextSheetTitle')?.textContent||'';
+  sheetBody=d.getElementById('vnextSheetBody')?.textContent||'';
+  if(sheetTitle!=='Navigate' || !/Go to page/i.test(sheetBody)) throw new Error('Navigate does not own Go to page');
+
+  w.vnextOpenFormat();
+  await sleep(20);
+  sheetTitle=d.getElementById('vnextSheetTitle')?.textContent||'';
+  sheetBody=d.getElementById('vnextSheetBody')?.textContent||'';
+  if(sheetTitle!=='Format' || !/Page display/i.test(sheetBody) || !/Crop/i.test(sheetBody)) throw new Error('PDF Format options missing');
+
+  w.eval("currentBook={ext:'epub',title:'Test EPUB'}; epubState={index:0,chapters:[{title:'Chapter One'}]};");
+  const oldFont=Number(w.eval('settings.font'));
+  w.vnextOpenFormat();
+  await sleep(20);
+  sheetBody=d.getElementById('vnextSheetBody')?.textContent||'';
+  if(!/Text size/i.test(sheetBody) || !/Line spacing/i.test(sheetBody) || !/Margins/i.test(sheetBody)) throw new Error('EPUB Format options missing');
+  w.v045EpubStep('font',1);
+  await sleep(20);
+  const newFont=Number(w.eval('settings.font'));
+  if(!(newFont>oldFont)) throw new Error('EPUB Format control did not change font setting');
+
+  console.log('MYREADER_READER_TOOL_SMOKE_TEST_PASS');
+
   if(errors.length) console.log('JSDOM_WARNINGS',JSON.stringify(errors.slice(0,10)));
   console.log('MYREADER_UI_SMOKE_TEST_PASS');
   console.log(JSON.stringify(result));
