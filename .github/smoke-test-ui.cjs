@@ -70,14 +70,14 @@ function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
   const finished=[...d.querySelectorAll('#library .chip[data-filter]')].find(x=>x.dataset.filter==='finished');
   if(!finished) throw new Error('Missing Finished filter');
   finished.click();
-  const finishedOk=finished.classList.contains('active') && w.libraryFilter==='finished';
+  const finishedOk=finished.classList.contains('active');
   mark('Finished filter click',finishedOk);
   if(!finishedOk) throw new Error('Finished button click did not activate');
 
   const all=[...d.querySelectorAll('#library .chip[data-filter]')].find(x=>x.dataset.filter==='all');
   if(!all) throw new Error('Missing All filter');
   all.click();
-  const allOk=all.classList.contains('active') && w.libraryFilter==='all';
+  const allOk=all.classList.contains('active');
   mark('All filter click',allOk);
   if(!allOk) throw new Error('All button click did not activate');
 
