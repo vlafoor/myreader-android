@@ -1,0 +1,626 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>MyReader — Full vNext Prototype v8</title>
+<style>
+:root{
+  --bg:#deddd7;--paper:#fbfaf6;--ink:#20231f;--muted:#777a72;--line:#d8d6cf;
+  --accent:#526f61;--accent-soft:#e4ece6;--chip:#efede6;--danger:#a24a43;--shadow:0 16px 38px rgba(35,42,37,.14)
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+button,input{font:inherit;color:inherit} button{cursor:pointer} svg{display:block}
+.app{width:min(100%,430px);height:100dvh;min-height:0;margin:auto;background:var(--paper);position:relative;overflow:hidden;box-shadow:0 0 0 1px rgba(0,0,0,.06)}
+@media(min-width:700px){body{padding:24px 0}.app{height:min(880px,calc(100dvh - 48px));min-height:0;border-radius:24px;box-shadow:var(--shadow)}}
+.screen{display:none;height:100%;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-top:24px;padding-bottom:78px;background:var(--paper)} .screen.active{display:block}
+.topbar{position:sticky;top:24px;z-index:60;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:18px 16px 10px;background:var(--paper);border-bottom:1px solid rgba(216,214,207,.85);box-shadow:0 3px 8px rgba(32,35,31,.025)}
+.title-wrap{min-width:0}.eyebrow{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:800}.title{font:700 27px/1.05 Georgia,serif;margin-top:3px}.subtle{font-size:11px;color:var(--muted)}
+.icon-btn{width:38px;height:38px;border:1px solid var(--line);border-radius:12px;background:var(--paper);display:grid;place-items:center;font-size:21px;line-height:1}.icon-btn:active{background:var(--chip)}
+.search{position:relative;z-index:1;margin:12px 16px 8px;height:44px;border:1px solid var(--line);border-radius:14px;background:#fff;display:flex;align-items:center;gap:9px;padding:0 12px;color:var(--muted)}.search input{border:0;outline:0;min-width:0;flex:1;background:transparent}.search .mag{font-size:18px}
+.chips{display:flex;gap:7px;overflow:auto;padding:4px 16px 12px;scrollbar-width:none}.chips::-webkit-scrollbar{display:none}.chip{flex:0 0 auto;border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:8px 12px;font-size:12px;font-weight:700}.chip.active{background:var(--ink);border-color:var(--ink);color:#fff}
+.section-head{display:flex;align-items:end;justify-content:space-between;padding:7px 16px 9px}.section-head h2{font-size:14px;margin:0}.section-head span,.section-head button{font-size:11px;color:var(--muted);border:0;background:transparent;padding:0}
+.continue-card{margin:0 16px 17px;border:1px solid #cfd9d1;background:var(--accent-soft);border-radius:17px;padding:12px;display:grid;grid-template-columns:58px 1fr 30px;gap:11px;align-items:center}.mini-cover{height:80px;border-radius:7px;background:linear-gradient(145deg,#3c5b4c,#8aa08e);border:1px solid rgba(0,0,0,.12);color:#fff;padding:7px;display:flex;align-items:end;font:700 9px/1.1 Georgia,serif}.continue-card h3{font-size:13px;margin:0 0 3px}.continue-card p{font-size:11px;color:var(--muted);margin:0 0 8px}.progress-track{height:5px;background:rgba(0,0,0,.12);border-radius:99px;overflow:hidden}.progress-track i{display:block;height:100%;background:var(--accent);border-radius:99px}.pct{font-size:10px;color:var(--muted);margin-top:4px}
+.book-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px 11px;padding:0 16px 26px}.book{min-width:0;user-select:none;position:relative}.cover{aspect-ratio:2/3;border:1px solid rgba(0,0,0,.14);border-radius:9px;overflow:hidden;padding:10px;display:flex;align-items:flex-end;position:relative;box-shadow:0 3px 8px rgba(0,0,0,.06);font:700 12px/1.05 Georgia,serif}.cover .badge{position:absolute;right:5px;top:5px;background:rgba(251,250,246,.94);border:1px solid rgba(0,0,0,.12);border-radius:6px;padding:3px 5px;font:700 9px Inter,sans-serif}.cover .format{position:absolute;right:5px;bottom:5px;background:rgba(251,250,246,.92);border-radius:4px;padding:2px 4px;font:700 8px Inter,sans-serif;text-transform:lowercase}.book h3{font-size:11px;margin:6px 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.book p{font-size:9px;color:var(--muted);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.c1{background:linear-gradient(155deg,#e8dcc2 0 52%,#95663d 52%);color:#251f1b}.c2{background:linear-gradient(145deg,#dce9d8,#95b693);color:#2e4431}.c3{background:linear-gradient(145deg,#2f3738,#687675);color:#f5f2e8}.c4{background:#ece6d8;color:#625d51}.c5{background:linear-gradient(150deg,#17322d,#62847b);color:#eff5f0}.c6{background:linear-gradient(160deg,#d8d6ce,#faf8ef);color:#333}.c7{background:linear-gradient(145deg,#c8d4c6,#5d705e);color:#203025}
+.bottom-nav{position:absolute;left:0;right:0;bottom:0;height:70px;border-top:1px solid var(--line);background:rgba(251,250,246,.99);display:grid;grid-template-columns:repeat(4,1fr);z-index:80;box-shadow:0 -4px 14px rgba(32,35,31,.04)}.nav-btn{border:0;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:9px;color:var(--muted)}.nav-btn.active{color:var(--accent);font-weight:800}.nav-ico{font-size:19px;line-height:1}
+.panel{margin:0 16px 14px;border:1px solid var(--line);border-radius:16px;background:#fff;overflow:hidden}.row{min-height:58px;padding:10px 13px;display:flex;align-items:center;gap:11px;border-bottom:1px solid var(--line)}.row:last-child{border-bottom:0}.row-btn{width:100%;border:0;background:#fff;text-align:left}.row-icon{width:32px;height:32px;border-radius:9px;background:var(--chip);display:grid;place-items:center;flex:0 0 auto}.row-copy{min-width:0;flex:1}.row-copy b{display:block;font-size:13px}.row-copy span{display:block;font-size:10px;color:var(--muted);margin-top:2px}.row-value{font-size:11px;color:var(--muted);white-space:nowrap}.chev{color:var(--muted);font-size:20px}
+.collection-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px;padding:4px 16px 22px}.collection-card{border:1px solid var(--line);border-radius:16px;background:#fff;padding:13px;min-height:118px;text-align:left}.collection-stack{height:57px;position:relative;margin-bottom:8px}.stack-book{position:absolute;width:39px;height:54px;border:1px solid rgba(0,0,0,.12);border-radius:5px;background:var(--accent-soft);top:0}.stack-book:nth-child(1){left:0;transform:rotate(-5deg)}.stack-book:nth-child(2){left:28px;background:#d9c9b0;transform:rotate(2deg)}.stack-book:nth-child(3){left:56px;background:#a8bbb0;transform:rotate(6deg)}.collection-card b{font-size:12px}.collection-card span{display:block;font-size:10px;color:var(--muted);margin-top:3px}.create-card{display:grid;place-items:center;text-align:center;border-style:dashed}.create-card .plus{font-size:27px;color:var(--accent)}
+.stats-wrap{padding:8px 16px 28px}.summary{border:1px solid var(--line);border-radius:17px;padding:15px 8px;background:#fff;display:grid;grid-template-columns:repeat(3,1fr)}.metric{text-align:center;border-right:1px solid var(--line)}.metric:last-child{border-right:0}.metric b{font:700 20px Georgia,serif;display:block}.metric span{font-size:9px;color:var(--muted)}.period{display:flex;margin:15px 0 12px;padding:3px;border:1px solid var(--line);border-radius:12px}.period button{flex:1;border:0;background:transparent;padding:9px;border-radius:9px;font-size:12px;font-weight:800}.period button.active{background:var(--ink);color:#fff}.date-row{display:flex;justify-content:center;align-items:center;gap:16px;margin:6px 0 14px;font-size:12px;font-weight:800}.date-row button{border:0;background:transparent;font-size:19px;color:var(--muted)}.chart-card{border:1px solid var(--line);border-radius:17px;background:#fff;padding:14px 12px}.chart{height:210px;display:flex;align-items:end;gap:5px;border-bottom:1px solid var(--line);background:repeating-linear-gradient(to top,transparent 0,transparent 51px,#efeee9 52px)}.bar-col{flex:1;height:100%;display:flex;align-items:end;justify-content:center;position:relative}.bar{width:min(16px,75%);min-height:1px;background:var(--accent);border-radius:4px 4px 0 0}.bar-col label{position:absolute;bottom:-21px;font-size:8px;color:var(--muted)}.chart-meta{margin-top:31px;display:flex;justify-content:space-between;font-size:10px;color:var(--muted)}.insight{margin-top:12px;padding:12px;border-radius:13px;background:var(--accent-soft);font-size:11px;line-height:1.45}.insight b{display:block;margin-bottom:2px}
+.note-card{margin:0 16px 11px;border:1px solid var(--line);border-radius:15px;background:#fff;padding:12px}.note-card .note-book{font-size:10px;color:var(--accent);font-weight:800}.note-card blockquote{margin:8px 0;font:15px/1.45 Georgia,serif}.note-card .note-meta{display:flex;justify-content:space-between;gap:10px;font-size:9px;color:var(--muted)}.hl-demo{background:#e6df9f;padding:0 2px}.ul-demo{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
+.settings-wrap{padding:5px 16px 26px}.settings-section{margin:12px 0 17px}.settings-section h2{font-size:10px;text-transform:uppercase;letter-spacing:.13em;color:var(--muted);margin:0 4px 7px}.switch{width:41px;height:24px;border:1px solid var(--line);background:#e4e3de;border-radius:99px;padding:2px;flex:0 0 auto}.switch i{display:block;width:18px;height:18px;border-radius:50%;background:#fff;border:1px solid rgba(0,0,0,.1);transition:.15s}.switch.on{background:var(--accent)}.switch.on i{transform:translateX(17px)}
+.reader-screen{padding-top:24px;padding-bottom:0;overflow:hidden}.reader-top{height:55px;padding:7px 11px;display:grid;grid-template-columns:40px 1fr 40px;align-items:center;border-bottom:1px solid var(--line);background:var(--paper);position:absolute;left:0;right:0;top:24px;z-index:35;transition:.15s}.reader-title{text-align:center;min-width:0}.reader-title b{display:block;font:700 13px Georgia,serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.reader-title span{display:block;font-size:8px;color:var(--muted);margin-top:2px}.reader-empty{width:40px;height:40px}.reader-body{min-height:100vh;padding:84px 21px 117px;background:#fbfaf6;font:17px/1.7 Georgia,serif;user-select:text;-webkit-user-select:text;transition:.15s}.reader-body .chapter{font:800 9px Inter,sans-serif;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:17px}.reader-body h1{font-size:25px;line-height:1.2;margin:0 0 8px}.reader-body p{margin:0 0 1.1em}.reader-progress{position:absolute;left:11px;right:11px;bottom:72px;z-index:28;height:32px;border:1px solid var(--line);border-radius:12px;background:rgba(251,250,246,.97);display:flex;align-items:center;gap:8px;padding:8px 9px;font:9px Inter,sans-serif;color:var(--muted)}.reader-progress .progress-track{flex:1;height:4px}.reader-tools{position:absolute;left:0;right:0;bottom:0;height:69px;background:var(--paper);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(6,1fr);z-index:29}.tool{border:0;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:7px;color:var(--muted)}.tool.active{color:var(--ink);font-weight:800}.tool .ti{font-size:18px;line-height:1}.reader-screen.chrome-hidden .reader-top,.reader-screen.chrome-hidden .reader-tools,.reader-screen.chrome-hidden .reader-progress{opacity:0;pointer-events:none;transform:translateY(-4px)}.reader-screen.chrome-hidden .reader-tools,.reader-screen.chrome-hidden .reader-progress{transform:translateY(4px)}.reader-screen.chrome-hidden .reader-body{padding-top:28px;padding-bottom:28px}
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:70;background:var(--paper);border-top:1px solid var(--line);border-radius:20px 20px 0 0;box-shadow:0 -16px 35px rgba(0,0,0,.14);transform:translateY(105%);transition:.18s ease;max-height:72vh;overflow:auto}.sheet.open{transform:translateY(0)}.sheet-head{position:sticky;top:0;z-index:2;background:var(--paper);display:flex;align-items:center;justify-content:space-between;padding:13px 15px 10px;border-bottom:1px solid var(--line)}.sheet-head b{font-size:14px}.close-btn{width:30px;height:30px;border:1px solid var(--line);border-radius:10px;background:var(--paper);font-size:17px}.sheet-body{padding:10px 15px 18px}.format-row{padding:11px 0;border-bottom:1px solid var(--line)}.format-row:last-child{border-bottom:0}.format-label{font-size:10px;color:var(--muted);margin-bottom:9px;font-weight:800;text-transform:uppercase;letter-spacing:.1em}.option-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.option-grid.crop5{grid-template-columns:repeat(5,1fr)}.square-opt{border:1px solid var(--line);background:#fff;border-radius:11px;min-height:58px;padding:7px 4px;font-size:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center}.square-opt.active{border-color:var(--accent);background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent)}.crop-ico{width:24px;height:24px;position:relative;border:1px solid #999}.crop-ico:before,.crop-ico:after{content:"";position:absolute;border-color:var(--ink);border-style:solid}.crop-none:before{inset:4px;border-width:1px}.crop-v:before{inset:1px 5px;border-width:1px 0}.crop-h:before{inset:5px 1px;border-width:0 1px}.crop-auto:before{inset:4px;border-width:1px}.crop-auto:after{inset:-3px;border-width:2px;border-color:var(--accent)}.crop-manual:before{inset:6px 3px 3px 6px;border-width:1px}.format-note{margin-top:8px;font-size:9px;color:var(--muted);line-height:1.45}.zoom-row{display:flex;align-items:center;justify-content:space-between;gap:10px}.zoom-btn{width:39px;height:36px;border:1px solid var(--line);background:#fff;border-radius:10px;font-size:19px}.zoom-value{font-size:12px;font-weight:800}.range{width:100%;accent-color:var(--accent)}
+.selection-pop{position:fixed;z-index:150;display:none;align-items:center;gap:2px;max-width:calc(100vw - 16px);overflow-x:auto;overscroll-behavior:contain;background:#242830;color:#fff;border:0;border-radius:16px;padding:5px;box-shadow:0 10px 28px rgba(0,0,0,.28);scrollbar-width:none}.selection-pop::-webkit-scrollbar{display:none}.selection-pop.show{display:flex}.selection-pop button{flex:0 0 auto;border:0;background:transparent;color:#fff;white-space:nowrap;padding:9px 11px;border-radius:11px;font-size:12px;min-height:34px}.selection-pop button:active{background:rgba(255,255,255,.14)}
+.overlay{position:absolute;inset:0;z-index:100;background:rgba(30,32,29,.34);display:none;align-items:flex-end}.overlay.show{display:flex}.modal{width:100%;background:var(--paper);border-radius:20px 20px 0 0;padding:14px 15px 18px;box-shadow:0 -18px 38px rgba(0,0,0,.18)}.book-mini{display:grid;grid-template-columns:48px 1fr;gap:10px;align-items:center;padding-bottom:11px;border-bottom:1px solid var(--line)}.book-mini .mini-cover{height:67px}.book-mini b{font-size:13px}.book-mini span{display:block;font-size:10px;color:var(--muted);margin-top:2px}.menu-list{padding-top:5px}.menu-item{width:100%;border:0;background:transparent;border-bottom:1px solid var(--line);padding:12px 3px;display:flex;align-items:center;gap:11px;text-align:left;font-size:12px}.menu-item:last-child{border-bottom:0}.menu-item.danger{color:var(--danger)}.menu-item .mi{width:29px;height:29px;border-radius:9px;background:var(--chip);display:grid;place-items:center}.modal-cancel{width:100%;margin-top:8px;border:1px solid var(--line);background:#fff;border-radius:12px;padding:11px;font-weight:800}.collection-picker{display:grid;gap:8px;padding:8px 0}.collection-pick{border:1px solid var(--line);background:#fff;border-radius:11px;padding:11px;text-align:left;font-size:12px}.collection-pick.active{background:var(--accent-soft);border-color:var(--accent)}
+.toast{position:absolute;z-index:200;left:50%;bottom:88px;transform:translate(-50%,15px);background:#242823;color:#fff;border-radius:10px;padding:9px 12px;font-size:10px;opacity:0;pointer-events:none;transition:.16s;max-width:88%;text-align:center}.toast.show{opacity:1;transform:translate(-50%,0)}
+.empty{padding:42px 24px;text-align:center;color:var(--muted);font-size:12px}.empty b{display:block;color:var(--ink);font:700 20px Georgia,serif;margin-bottom:7px}.hidden{display:none!important}
+
+.device-status{position:absolute;left:0;right:0;top:0;height:24px;z-index:120;background:var(--paper);display:flex;align-items:center;justify-content:space-between;padding:0 11px;font:700 11px/1 Inter,ui-sans-serif,system-ui;color:var(--ink);border-bottom:1px solid rgba(216,214,207,.45)}
+.status-right{display:flex;align-items:center;gap:7px;font-weight:600}.battery{width:18px;height:9px;border:1px solid currentColor;border-radius:2px;position:relative;display:inline-block}.battery:after{content:"";position:absolute;right:-3px;top:2px;width:2px;height:4px;background:currentColor;border-radius:0 1px 1px 0}.battery i{display:block;height:100%;width:39%;background:currentColor}
+.reader-body.turn-slide-next{animation:slideNext .20s ease}.reader-body.turn-slide-prev{animation:slidePrev .20s ease}.reader-body.turn-book-next{transform-origin:left center;animation:bookNext .30s ease}.reader-body.turn-book-prev{transform-origin:right center;animation:bookPrev .30s ease}
+@keyframes slideNext{0%{transform:translateX(0);opacity:1}48%{transform:translateX(-12%);opacity:.6}49%{transform:translateX(12%);opacity:.6}100%{transform:translateX(0);opacity:1}}
+@keyframes slidePrev{0%{transform:translateX(0);opacity:1}48%{transform:translateX(12%);opacity:.6}49%{transform:translateX(-12%);opacity:.6}100%{transform:translateX(0);opacity:1}}
+@keyframes bookNext{0%{transform:perspective(700px) rotateY(0);opacity:1}48%{transform:perspective(700px) rotateY(-52deg);opacity:.62}49%{transform:perspective(700px) rotateY(52deg);opacity:.62}100%{transform:perspective(700px) rotateY(0);opacity:1}}
+@keyframes bookPrev{0%{transform:perspective(700px) rotateY(0);opacity:1}48%{transform:perspective(700px) rotateY(52deg);opacity:.62}49%{transform:perspective(700px) rotateY(-52deg);opacity:.62}100%{transform:perspective(700px) rotateY(0);opacity:1}}
+.tap-hint{position:absolute;left:50%;top:88px;transform:translateX(-50%);z-index:42;background:rgba(36,40,35,.88);color:#fff;border-radius:999px;padding:6px 9px;font-size:9px;opacity:0;pointer-events:none;transition:.15s}.tap-hint.show{opacity:1}
+
+
+/* v5 layout fix: status bar + header are outside the scrolling content. */
+.screen:not(.reader-screen){
+  padding:24px 0 0!important;
+  overflow:hidden!important;
+  display:none;
+  flex-direction:column;
+  min-height:0;
+}
+.screen:not(.reader-screen).active{display:flex!important}
+.screen:not(.reader-screen)>.topbar{
+  position:relative!important;
+  top:auto!important;
+  left:auto!important;
+  right:auto!important;
+  flex:0 0 auto;
+  z-index:61;
+  background:var(--paper);
+  box-shadow:none;
+}
+.screen-scroll{
+  flex:1 1 auto;
+  min-height:0;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  padding:0 0 86px;
+  background:var(--paper);
+  scrollbar-gutter:stable;
+}
+.screen-scroll>.search{margin-top:12px}
+.screen-scroll>.settings-wrap{padding-top:5px}
+.screen-scroll>.collection-grid{padding-top:8px}
+.screen-scroll>.stats-wrap{padding-top:8px}
+/* Keep the device status above every main-page header. */
+.device-status{position:absolute!important;top:0!important}
+
+
+/* v6 interactive reader additions */
+.note-card{user-select:none;-webkit-user-select:none;touch-action:pan-y}
+.go-page-wrap{display:grid;grid-template-columns:40px 1fr 40px;gap:9px;align-items:center}.go-page-center{display:flex;align-items:center;justify-content:center;gap:5px}.page-input{width:76px;height:40px;border:1px solid var(--line);border-radius:10px;background:#fff;text-align:center;font-weight:800;outline:0}.page-input:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}.go-btn{width:100%;margin-top:10px;border:1px solid var(--accent);background:var(--accent-soft);border-radius:11px;padding:10px;font-size:11px;font-weight:800}
+.split-secondary{display:none;background:#f7f5ef;font:14px/1.55 Georgia,serif;color:var(--ink);padding:16px;z-index:18}.split-secondary .split-label{font:800 9px Inter,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}.split-secondary h3{font-size:18px;margin:0 0 9px}.split-secondary p{margin:0 0 12px}.split-secondary .ref-card{border:1px solid var(--line);border-radius:12px;background:#fff;padding:11px;margin-bottom:9px}.split-secondary .ref-card b{font:800 11px Inter,sans-serif}.split-secondary .ref-card span{display:block;font-size:12px;margin-top:5px}
+.reader-screen.split-vertical .reader-body{position:absolute;top:79px;bottom:101px;left:0;width:50%;min-height:0;overflow:auto;padding:18px 12px 22px;border-right:1px solid var(--line);font-size:14px;line-height:1.55}.reader-screen.split-vertical .split-secondary{display:block;position:absolute;top:79px;bottom:101px;left:50%;right:0;overflow:auto}
+.reader-screen.split-horizontal .reader-body{position:absolute;top:79px;height:calc((100% - 180px)/2);left:0;right:0;min-height:0;overflow:auto;padding:16px 18px;border-bottom:1px solid var(--line);font-size:14px;line-height:1.55}.reader-screen.split-horizontal .split-secondary{display:block;position:absolute;top:calc(79px + (100% - 180px)/2);bottom:101px;left:0;right:0;overflow:auto}
+.reader-screen.split-reference .reader-body{position:absolute;top:79px;bottom:101px;left:0;width:66%;min-height:0;overflow:auto;padding:18px 13px 22px;border-right:1px solid var(--line);font-size:14px;line-height:1.55}.reader-screen.split-reference .split-secondary{display:block;position:absolute;top:79px;bottom:101px;left:66%;right:0;overflow:auto;padding:12px 9px;font-size:12px}
+.reader-screen.split-vertical .reader-progress,.reader-screen.split-horizontal .reader-progress,.reader-screen.split-reference .reader-progress{bottom:69px}
+.page-turn-layer{display:none;position:absolute;top:79px;bottom:101px;left:0;right:0;z-index:26;background:#fbfaf6;padding:18px 21px;overflow:hidden;font:17px/1.7 Georgia,serif;pointer-events:none;backface-visibility:hidden;transform-style:preserve-3d}.page-turn-layer.show{display:block}.page-turn-layer.slide-next{animation:oldSlideNext .38s ease both}.page-turn-layer.slide-prev{animation:oldSlidePrev .38s ease both}.page-turn-layer.book-next{transform-origin:left center;animation:pageFlipNext .58s cubic-bezier(.35,.05,.15,1) both;box-shadow:14px 0 24px rgba(0,0,0,.18)}.page-turn-layer.book-prev{transform-origin:right center;animation:pageFlipPrev .58s cubic-bezier(.35,.05,.15,1) both;box-shadow:-14px 0 24px rgba(0,0,0,.18)}
+.reader-body.new-slide-next{animation:newSlideNext .38s ease}.reader-body.new-slide-prev{animation:newSlidePrev .38s ease}.reader-body.new-book-next{animation:newBookNext .58s ease}.reader-body.new-book-prev{animation:newBookPrev .58s ease}
+@keyframes oldSlideNext{from{transform:translateX(0);opacity:1}to{transform:translateX(-34%);opacity:.15}}@keyframes oldSlidePrev{from{transform:translateX(0);opacity:1}to{transform:translateX(34%);opacity:.15}}@keyframes newSlideNext{from{transform:translateX(18%);opacity:.25}to{transform:translateX(0);opacity:1}}@keyframes newSlidePrev{from{transform:translateX(-18%);opacity:.25}to{transform:translateX(0);opacity:1}}
+@keyframes pageFlipNext{0%{transform:perspective(850px) rotateY(0deg);opacity:1}72%{transform:perspective(850px) rotateY(-78deg);opacity:.72}100%{transform:perspective(850px) rotateY(-92deg);opacity:0}}@keyframes pageFlipPrev{0%{transform:perspective(850px) rotateY(0deg);opacity:1}72%{transform:perspective(850px) rotateY(78deg);opacity:.72}100%{transform:perspective(850px) rotateY(92deg);opacity:0}}@keyframes newBookNext{from{filter:brightness(.88)}to{filter:brightness(1)}}@keyframes newBookPrev{from{filter:brightness(.88)}to{filter:brightness(1)}}
+
+
+/* v7 reader cleanup: no duplicate status bar while reading; battery lives in the hideable reader header. */
+.app.reader-open>.device-status{display:none}
+.app.reader-open .reader-screen{padding-top:0}
+.app.reader-open .reader-top{top:0}
+.app.reader-open .reader-body{padding-top:60px}
+.app.reader-open .page-turn-layer{top:55px}
+.app.reader-open .reader-screen.split-vertical .reader-body{top:55px}
+.app.reader-open .reader-screen.split-vertical .split-secondary{top:55px}
+.app.reader-open .reader-screen.split-horizontal .reader-body{top:55px;height:calc((100% - 156px)/2)}
+.app.reader-open .reader-screen.split-horizontal .split-secondary{top:calc(55px + (100% - 156px)/2)}
+.app.reader-open .reader-screen.split-reference .reader-body{top:55px}
+.app.reader-open .reader-screen.split-reference .split-secondary{top:55px}
+.reader-meta-line{display:flex!important;align-items:center;justify-content:center;gap:7px;white-space:nowrap}
+.reader-battery{display:inline-flex;align-items:center;gap:4px;color:var(--muted);font:700 8px/1 Inter,ui-sans-serif,system-ui}
+.reader-battery .battery{width:13px;height:7px}.reader-battery .battery:after{right:-3px;top:1px;height:3px}
+.note-delete-modal{max-width:310px;padding:18px}.confirm-title{font:800 18px/1.25 Inter,ui-sans-serif,system-ui;margin-bottom:7px}.confirm-copy{font:12px/1.45 Inter,ui-sans-serif,system-ui;color:var(--muted);margin-bottom:16px}.confirm-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.confirm-actions .modal-cancel,.modal-danger{margin:0;border:1px solid var(--line);border-radius:11px;min-height:42px;background:#fff;font:700 12px Inter,ui-sans-serif,system-ui}.modal-danger{color:#a3352c;border-color:#d9b8b4;background:#fff8f7}
+
+
+
+/* v8 polish + functional format preview */
+.reader-top{display:flex!important;align-items:center;justify-content:center;position:absolute!important;padding:7px 10px!important}
+.reader-left-cluster{position:absolute;left:9px;top:7px;height:40px;display:flex;align-items:center;gap:7px;z-index:2}
+.reader-mini-status{display:flex;align-items:center;gap:6px;font:700 8px/1 Inter,ui-sans-serif,system-ui;color:var(--muted);white-space:nowrap}
+.reader-mini-battery{display:inline-flex;align-items:center;gap:3px}.reader-mini-battery .battery{width:12px;height:6px}.reader-mini-battery .battery:after{right:-3px;top:1px;height:2px}
+.reader-title{width:min(58%,230px);pointer-events:none}.reader-right-spacer{position:absolute;right:9px;width:92px;height:40px;pointer-events:none}
+.reader-meta-line,.reader-battery{display:none!important}
+.center-overlay{align-items:center!important;justify-content:center!important;padding:20px;background:rgba(30,32,29,.38)}
+.center-overlay .note-delete-modal{width:min(100%,300px)!important;border-radius:19px!important;box-shadow:0 18px 44px rgba(0,0,0,.22)!important;margin:0!important}
+.note-delete-modal .confirm-actions{margin-top:4px}.note-delete-modal .modal-cancel{margin:0!important}
+#notesChips .chip{cursor:pointer}#notesChips .chip:active{transform:translateY(1px)}
+.reader-body{--readerZoom:1;--blankSpace:0px;--previewContrast:1;font-size:calc(17px * var(--readerZoom));filter:contrast(var(--previewContrast));padding-bottom:calc(117px + var(--blankSpace))!important;overflow:auto}
+.reader-body h1{font-size:calc(25px * var(--readerZoom))}
+.reader-body[data-crop="none"]{padding-left:34px!important;padding-right:34px!important;padding-top:78px!important}
+.reader-body[data-crop="topbottom"]{padding-top:48px!important;padding-bottom:calc(82px + var(--blankSpace))!important}
+.reader-body[data-crop="leftright"]{padding-left:9px!important;padding-right:9px!important}
+.reader-body[data-crop="auto"]{padding-left:12px!important;padding-right:12px!important;padding-top:58px!important;padding-bottom:calc(92px + var(--blankSpace))!important}
+.reader-body[data-crop="manual"]{padding-left:20px!important;padding-right:13px!important;padding-top:64px!important;border-left:5px solid #d9ded8;border-right:2px solid #d9ded8}
+.preview-page{min-width:0}.continuous-divider{font:800 9px Inter,sans-serif;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;border-top:1px dashed var(--line);padding:15px 0 10px;margin:18px 0 8px}
+.facing-pages{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start}.facing-pages .preview-page{border:1px solid var(--line);border-radius:8px;padding:10px;background:#fff;font-size:.72em;min-height:430px}.facing-pages h1{font-size:1.35em}.page-number{font:800 8px Inter,sans-serif;color:var(--muted);text-align:right;margin-bottom:6px}
+.horizontal-pages{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:8px}.horizontal-pages .preview-page{flex:0 0 92%;scroll-snap-align:start;border:1px solid var(--line);border-radius:9px;background:#fff;padding:14px}
+.reader-screen.split-vertical .reader-body,.reader-screen.split-horizontal .reader-body,.reader-screen.split-reference .reader-body{filter:contrast(var(--previewContrast));font-size:calc(14px * var(--readerZoom))}
+
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="device-status" aria-label="Device status">
+    <span id="statusTime">10:56</span>
+    <span class="status-right"><span>✈</span><span class="battery"><i id="batteryFill"></i></span><span id="batteryPct">39%</span></span>
+  </div>
+  <section class="screen active" id="libraryScreen">
+    <header class="topbar">
+      <div class="title-wrap"><div class="eyebrow">MYREADER</div><div class="title">My Library</div></div>
+      <button class="icon-btn" id="addBookBtn" title="Add books">＋</button>
+    </header>
+    <div class="search"><span class="mag">⌕</span><input id="searchInput" placeholder="Search title or author" /></div>
+    <div class="chips" id="libraryChips">
+      <button class="chip active" data-filter="all">All</button>
+      <button class="chip" data-filter="reading">Reading</button>
+      <button class="chip" data-filter="finished">Finished</button>
+      <button class="chip" data-filter="collections">Collections</button>
+    </div>
+    <input type="file" id="fileInput" multiple hidden accept=".epub,.pdf,.cbz,.cbr,.txt,application/pdf,application/epub+zip,text/plain" />
+
+    <div id="continueBlock">
+      <div class="section-head"><h2>CONTINUE READING</h2><span>76%</span></div>
+      <button class="continue-card row-btn" onclick="openReader('Ubur-Ubur Lembur','PDF')">
+        <div class="mini-cover">UBUR-UBUR<br/>LEMBUR</div>
+        <div><h3>Ubur-Ubur Lembur</h3><p>Page 143 of 188 · 38m left</p><div class="progress-track"><i style="width:76%"></i></div><div class="pct">76% completed</div></div>
+        <div style="font-size:23px;color:var(--muted)">›</div>
+      </button>
+    </div>
+
+    <div class="section-head"><h2 id="gridTitle">All books</h2><span id="bookCount">6 books</span></div>
+    <div class="book-grid" id="bookGrid">
+      <article class="book" data-title="Teka-Teki Gambar Aneh" data-author="Uketsu" data-progress="4" data-format="pdf"><div class="cover c1"><span>Teka-Teki<br/>Gambar Aneh</span><span class="badge">4%</span><span class="format">pdf</span></div><h3>Teka-Teki Gambar Aneh</h3><p>Uketsu</p></article>
+      <article class="book" data-title="The Let Them Theory" data-author="Mel Robbins" data-progress="3" data-format="epub"><div class="cover c2"><span>THE LET<br/>THEM THEORY</span><span class="badge">3%</span><span class="format">epub</span></div><h3>The Let Them Theory</h3><p>Mel Robbins</p></article>
+      <article class="book" data-title="Makhluk Bumi" data-author="Sayaka Murata" data-progress="17" data-format="pdf"><div class="cover c3"><span>MAKHLUK<br/>BUMI</span><span class="badge">17%</span><span class="format">pdf</span></div><h3>Makhluk Bumi</h3><p>Sayaka Murata</p></article>
+      <article class="book" data-title="Catatan Pembunuhan sang Novelis" data-author="Keigo Higashino" data-progress="32" data-format="epub"><div class="cover c4"><span>Catatan<br/>Pembunuhan</span><span class="badge">32%</span><span class="format">epub</span></div><h3>Catatan Pembunuhan</h3><p>Keigo Higashino</p></article>
+      <article class="book" data-title="Ubur-Ubur Lembur" data-author="Raditya Dika" data-progress="76" data-format="pdf"><div class="cover c5"><span>UBUR-UBUR<br/>LEMBUR</span><span class="badge">76%</span><span class="format">pdf</span></div><h3>Ubur-Ubur Lembur</h3><p>Raditya Dika</p></article>
+      <article class="book" data-title="Sapiens" data-author="Yuval Noah Harari" data-progress="100" data-format="pdf"><div class="cover c6"><span>Sapiens</span><span class="badge">100%</span><span class="format">pdf</span></div><h3>Sapiens</h3><p>Yuval Noah Harari</p></article>
+    </div>
+  </section>
+
+  <section class="screen" id="collectionsScreen">
+    <header class="topbar"><button class="icon-btn" onclick="showMain('libraryScreen')">‹</button><div class="title-wrap" style="flex:1"><div class="eyebrow">LIBRARY</div><div class="title">Collections</div></div><span style="width:38px"></span></header>
+    <div class="collection-grid" id="collectionGrid">
+      <button class="collection-card" onclick="openCollection('Favorites')"><div class="collection-stack"><i class="stack-book"></i><i class="stack-book"></i><i class="stack-book"></i></div><b>Favorites</b><span>4 books</span></button>
+      <button class="collection-card" onclick="openCollection('To Read')"><div class="collection-stack"><i class="stack-book"></i><i class="stack-book"></i></div><b>To Read</b><span>7 books</span></button>
+      <button class="collection-card" onclick="openCollection('Thriller')"><div class="collection-stack"><i class="stack-book"></i><i class="stack-book"></i><i class="stack-book"></i></div><b>Thriller</b><span>3 books</span></button>
+      <button class="collection-card create-card" onclick="createCollection()"><div><div class="plus">＋</div><b>New collection</b><span>Create collection</span></div></button>
+    </div>
+  </section>
+
+  <section class="screen" id="statsScreen">
+    <header class="topbar"><div class="title-wrap"><div class="eyebrow">READING</div><div class="title">Reading Stats</div></div></header>
+    <div class="stats-wrap">
+      <div class="summary"><div class="metric"><b>11</b><span>Reading</span></div><div class="metric"><b>6</b><span>Finished</span></div><div class="metric"><b>4h30m</b><span>Duration</span></div></div>
+      <div class="period" id="periodSwitch"><button class="active" data-period="week">Week</button><button data-period="month">Month</button></div>
+      <div class="date-row"><button onclick="shiftPeriod(-1)">‹</button><span id="periodLabel">Oct 19 – 25, 2026</span><button onclick="shiftPeriod(1)">›</button></div>
+      <div class="chart-card"><div class="chart" id="chart"></div><div class="chart-meta"><span id="totalLabel">2h 51m total</span><span id="avgLabel">24m/day avg</span></div></div>
+      <div class="insight"><b id="insightTitle">Best reading day: Tuesday</b><span id="insightText">You read 1h 04m. Four active reading days this week.</span></div>
+      <div class="section-head" style="padding-left:0;padding-right:0;margin-top:12px"><h2>Book progress</h2><span>This month</span></div>
+      <div class="panel"><div class="row"><div class="row-icon">▥</div><div class="row-copy"><b>Ubur-Ubur Lembur</b><span>+29% this month</span></div><div class="row-value">76%</div></div><div class="row"><div class="row-icon">▥</div><div class="row-copy"><b>Catatan Pembunuhan</b><span>+14% this month</span></div><div class="row-value">32%</div></div></div>
+    </div>
+  </section>
+
+  <section class="screen" id="notesScreen">
+    <header class="topbar"><div class="title-wrap"><div class="eyebrow">MYREADER</div><div class="title">Notes</div></div><button class="icon-btn" onclick="toast('Search notes')">⌕</button></header>
+    <div class="chips" id="notesChips"><button class="chip active" data-note-filter="all">All</button><button class="chip" data-note-filter="highlight">Highlights</button><button class="chip" data-note-filter="underline">Underlines</button><button class="chip" data-note-filter="note">Notes</button></div>
+    <div id="notesList">
+      <article class="note-card" data-type="highlight" data-book="The Quiet Edge" data-format="PDF" data-page="143"><div class="note-book">THE QUIET EDGE · Chapter Six</div><blockquote><span class="hl-demo">There was a meaning she had missed.</span></blockquote><div class="note-meta"><span>Highlight</span><span>Page 143</span></div></article>
+      <article class="note-card" data-type="underline" data-book="The Let Them Theory" data-format="EPUB" data-page="6"><div class="note-book">THE LET THEM THEORY · Chapter 2</div><blockquote><span class="ul-demo">You cannot control other people's reactions.</span></blockquote><div class="note-meta"><span>Underline</span><span>3%</span></div></article>
+      <article class="note-card" data-type="note" data-book="Makhluk Bumi" data-format="PDF" data-page="41"><div class="note-book">MAKHLUK BUMI · Page 41</div><blockquote>“Ini bagian yang mau kubaca ulang nanti.”</blockquote><div class="note-meta"><span>Note · Review this idea</span><span>17%</span></div></article>
+    </div>
+  </section>
+
+  <section class="screen" id="settingsScreen">
+    <header class="topbar"><div class="title-wrap"><div class="eyebrow">MYREADER</div><div class="title">Settings</div></div></header>
+    <div class="settings-wrap">
+      <section class="settings-section"><h2>Reading appearance</h2><div class="panel">
+        <button class="row row-btn" onclick="cycleValue('fontValue',['Bookerly','Georgia','System'])"><div class="row-icon">Aa</div><div class="row-copy"><b>Reader font</b><span>EPUB and TXT reading font</span></div><div class="row-value" id="fontValue">Georgia</div><span class="chev">›</span></button>
+        <button class="row row-btn" onclick="cycleValue('themeValue',['Paper','White','Dark'])"><div class="row-icon">◐</div><div class="row-copy"><b>Reading theme</b><span>Reader page background</span></div><div class="row-value" id="themeValue">Paper</div><span class="chev">›</span></button>
+        <div class="row"><div class="row-icon">↔</div><div class="row-copy"><b>Tap to hide controls</b><span>Center tap hides or shows reader controls</span></div><button class="switch on" onclick="toggleSwitch(this,'Tap to hide controls')"><i></i></button></div>
+        <button class="row row-btn" onclick="cyclePageTurnMethod()"><div class="row-icon">⇆</div><div class="row-copy"><b>Page turn method</b><span>Choose how you move between pages</span></div><div class="row-value" id="pageTurnMethodValue">Tap + swipe</div><span class="chev">›</span></button>
+        <button class="row row-btn" onclick="cyclePageTurnEffect()"><div class="row-icon">▱</div><div class="row-copy"><b>Page turn effect</b><span>Instant is lightest; Book flip feels like a real page</span></div><div class="row-value" id="pageTurnEffectValue">Instant</div><span class="chev">›</span></button>
+        <div class="row"><div class="row-icon">↯</div><div class="row-copy"><b>E-Ink friendly mode</b><span>Reduce animation and redraws</span></div><button class="switch on" onclick="toggleSwitch(this,'E-Ink friendly mode')"><i></i></button></div>
+      </div></section>
+
+      <section class="settings-section"><h2>PDF & Comics</h2><div class="panel">
+        <button class="row row-btn" onclick="cycleValue('pdfValue',['Fit width','Fit page'])"><div class="row-icon">▤</div><div class="row-copy"><b>Default PDF view</b><span>Applied when opening PDF</span></div><div class="row-value" id="pdfValue">Fit width</div><span class="chev">›</span></button>
+        <div class="row"><div class="row-icon">⌗</div><div class="row-copy"><b>Auto crop margins</b><span>Trim blank edges on scanned pages</span></div><button class="switch on" onclick="toggleSwitch(this,'Auto crop margins')"><i></i></button></div>
+        <div class="row"><div class="row-icon">◩</div><div class="row-copy"><b>Remember crop per book</b><span>Keep each book's crop choice</span></div><button class="switch on" onclick="toggleSwitch(this,'Remember crop per book')"><i></i></button></div>
+        <button class="row row-btn" onclick="cycleValue('comicValue',['Left → right','Right → left'])"><div class="row-icon">↔</div><div class="row-copy"><b>Comic direction</b><span>CBZ/CBR page order</span></div><div class="row-value" id="comicValue">Left → right</div><span class="chev">›</span></button>
+      </div></section>
+
+      <section class="settings-section"><h2>Library & Storage</h2><div class="panel">
+        <button class="row row-btn" onclick="document.getElementById('fileInput').click()"><div class="row-icon">＋</div><div class="row-copy"><b>Add books</b><span>Uses the existing MyReader import flow</span></div><div class="row-value">EPUB/PDF/CBZ/CBR/TXT</div><span class="chev">›</span></button>
+        <div class="row"><div class="row-icon">✦</div><div class="row-copy"><b>Read book metadata</b><span>Title, author and embedded cover</span></div><button class="switch on" onclick="toggleSwitch(this,'Book metadata')"><i></i></button></div>
+        <button class="row row-btn" onclick="toast('Reading cache cleared (prototype)')"><div class="row-icon">⌫</div><div class="row-copy"><b>Reading cache</b><span>Temporary PDF and cover data</span></div><div class="row-value">12 MB</div><span class="chev">›</span></button>
+      </div></section>
+
+      <section class="settings-section"><h2>Sync & backup</h2><div class="panel">
+        <button class="row row-btn" onclick="toggleDrive()"><div class="row-icon">☁</div><div class="row-copy"><b>Google Drive folder</b><span id="driveSub">MyReader Sync folder selected</span></div><div class="row-value" id="driveValue">Connected</div><span class="chev">›</span></button>
+        <button class="row row-btn" onclick="toast('Sync complete — progress, notes, highlights & settings')"><div class="row-icon">↕</div><div class="row-copy"><b>Sync now</b><span>Progress, notes, highlights & settings</span></div><div class="row-value">Now</div><span class="chev">›</span></button>
+      </div></section>
+
+      <section class="settings-section"><h2>About</h2><div class="panel"><div class="row"><div class="row-icon">♡</div><div class="row-copy"><b>MyReader</b><span>Full vNext prototype v7 · by vlafoor ♡</span></div><div class="row-value">Preview</div></div></div></section>
+    </div>
+  </section>
+
+  <section class="screen reader-screen" id="readerScreen">
+    <header class="reader-top" id="readerTop"><div class="reader-left-cluster"><button class="icon-btn" onclick="closeReader()">‹</button><div class="reader-mini-status"><span id="readerTime">10:56</span><span class="reader-mini-battery"><span class="battery"><i id="readerBatteryFill"></i></span><span id="readerBatteryPct">39%</span></span></div></div><div class="reader-title"><b id="readerBookTitle">The Quiet Edge</b><span id="readerMeta">PDF · page 143 of 188</span></div><div class="reader-right-spacer"></div></header>
+    <main class="reader-body" id="readerBody">
+      <div class="chapter">CHAPTER SIX</div><h1>The room after midnight</h1>
+      <p>The library had gone quiet enough that every page turn seemed louder than it should. Mira looked again at the note she had copied earlier, certain there was a meaning she had missed.</p>
+      <p>She read the paragraph twice, then moved closer to the window. The margin around the scanned page was wide and uneven, stealing more space than the text itself.</p>
+      <p>On a small screen, that difference mattered. A tighter crop made the page feel less like a photograph and more like a book again.</p>
+      <p>She marked the page, lowered the brightness, and continued reading. Select any sentence here to preview the existing MyReader text actions.</p>
+      <p>Underlines, highlights, notes, definitions and translation should stay part of the same reading flow rather than becoming a separate reader system.</p>
+    </main>
+    <aside class="split-secondary" id="splitSecondary"></aside>
+    <div class="page-turn-layer" id="pageTurnLayer"></div>
+    <div class="reader-progress"><span id="readerPct">76%</span><div class="progress-track"><i id="readerBar" style="width:76%"></i></div><span id="readerLeft">38m left</span></div>
+    <div class="tap-hint" id="tapHint">Page 143</div>
+    <nav class="reader-tools">
+      <button class="tool" onclick="openToolSheet('Contents')"><span class="ti">☰</span>Contents</button>
+      <button class="tool" onclick="openToolSheet('Progress')"><span class="ti">⌁</span>Progress</button>
+      <button class="tool active" onclick="openFormat()"><span class="ti">▣</span>Format</button>
+      <button class="tool" onclick="openToolSheet('Contrast')"><span class="ti">◐</span>Contrast</button>
+      <button class="tool" onclick="openToolSheet('Navigate')"><span class="ti">→</span>Navigate</button>
+      <button class="tool" onclick="openToolSheet('Split view')"><span class="ti">▥</span>Split</button>
+    </nav>
+
+    <aside class="sheet" id="formatSheet">
+      <div class="sheet-head"><b>Format</b><button class="close-btn" onclick="closeSheets()">×</button></div>
+      <div class="sheet-body">
+        <div class="format-row"><div class="format-label">Page display</div><div class="option-grid" id="displayOptions">
+          <button class="square-opt active" onclick="pickPageDisplay(this)"><span style="font-size:21px">▤</span><span>Single</span></button>
+          <button class="square-opt" onclick="pickPageDisplay(this)"><span style="font-size:21px">▥</span><span>Continuous</span></button>
+          <button class="square-opt" onclick="pickPageDisplay(this)"><span style="font-size:21px">▦</span><span>Facing</span></button>
+          <button class="square-opt" onclick="pickPageDisplay(this)"><span style="font-size:21px">↔</span><span>Horizontal</span></button>
+        </div></div>
+        <div class="format-row"><div class="format-label">Zoom</div><div class="zoom-row"><button class="zoom-btn" onclick="zoom(-10)">−</button><span class="zoom-value" id="zoomValue">100%</span><button class="zoom-btn" onclick="zoom(10)">＋</button></div></div>
+        <div class="format-row"><div class="format-label">Crop</div><div class="option-grid crop5" id="cropOptions">
+          <button class="square-opt" data-label="No crop" onclick="pickCrop(this)"><span class="crop-ico crop-none"></span><span>None</span></button>
+          <button class="square-opt" data-label="Top / bottom" onclick="pickCrop(this)"><span class="crop-ico crop-v"></span><span>Top/Bottom</span></button>
+          <button class="square-opt" data-label="Left / right" onclick="pickCrop(this)"><span class="crop-ico crop-h"></span><span>Left/Right</span></button>
+          <button class="square-opt active" data-label="Auto crop all margins" onclick="pickCrop(this)"><span class="crop-ico crop-auto"></span><span>Auto</span></button>
+          <button class="square-opt" data-label="Manual crop" onclick="pickCrop(this)"><span class="crop-ico crop-manual"></span><span>Manual</span></button>
+        </div><div class="format-note" id="cropNote"><b>Selected:</b> Auto crop all margins. This is the option based on the crop mode you use most often in Bigme.</div></div>
+        <div class="format-row"><div class="format-label">Leave blank space</div><input class="range" type="range" min="0" max="20" value="0" oninput="setBlankSpace(this.value)"><div class="format-note">Current: <b id="blankVal">0</b></div></div>
+      </div>
+    </aside>
+
+    <aside class="sheet" id="genericSheet"><div class="sheet-head"><b id="genericTitle">Tool</b><button class="close-btn" onclick="closeSheets()">×</button></div><div class="sheet-body" id="genericBody"></div></aside>
+
+    <div class="selection-pop" id="selectionPop" onpointerdown="event.preventDefault()">
+      <button onclick="defineText()">Definition</button>
+      <button onclick="translateText()">Translate</button>
+      <button onclick="applyHighlight()">Highlight</button>
+      <button onclick="applyUnderline()">Underline</button>
+      <button onclick="saveNote()">Note</button>
+    </div>
+  </section>
+
+  <nav class="bottom-nav" id="mainNav">
+    <button class="nav-btn active" data-target="libraryScreen"><span class="nav-ico">▥</span>Library</button>
+    <button class="nav-btn" data-target="statsScreen"><span class="nav-ico">⌁</span>Stats</button>
+    <button class="nav-btn" data-target="notesScreen"><span class="nav-ico">▤</span>Notes</button>
+    <button class="nav-btn" data-target="settingsScreen"><span class="nav-ico">⚙</span>Settings</button>
+  </nav>
+
+  <div class="overlay" id="bookOptions" onclick="overlayClick(event,'bookOptions')"><div class="modal" onclick="event.stopPropagation()">
+    <div class="book-mini"><div class="mini-cover c2" id="optCover">BOOK</div><div><b id="optTitle">Book title</b><span id="optAuthor">Author</span></div></div>
+    <div class="menu-list"><button class="menu-item" onclick="toast('Edit cover — existing book data stays intact');closeOverlay('bookOptions')"><span class="mi">▧</span>Edit cover</button><button class="menu-item" onclick="toast('PDF → EPUB conversion flow kept');closeOverlay('bookOptions')"><span class="mi">⇄</span>Convert PDF to EPUB</button><button class="menu-item" onclick="openCollectionPicker()"><span class="mi">▥</span>Add to collection</button><button class="menu-item danger" onclick="confirmDelete()"><span class="mi">⌫</span>Delete</button></div>
+    <button class="modal-cancel" onclick="closeOverlay('bookOptions')">Cancel</button>
+  </div></div>
+
+  <div class="overlay center-overlay" id="noteOptions" onclick="overlayClick(event,'noteOptions')"><div class="modal note-delete-modal" onclick="event.stopPropagation()">
+    <div class="confirm-title">Delete this note?</div>
+    <div class="confirm-copy">This only removes the selected note/highlight entry.</div>
+    <div class="confirm-actions"><button class="modal-cancel" onclick="closeOverlay('noteOptions')">No</button><button class="modal-danger" onclick="deleteCurrentNote()">Yes, delete</button></div>
+  </div></div>
+
+  <div class="overlay" id="collectionPicker" onclick="overlayClick(event,'collectionPicker')"><div class="modal" onclick="event.stopPropagation()"><div class="sheet-head" style="padding:0 0 9px"><b>Add to collection</b><button class="close-btn" onclick="closeOverlay('collectionPicker')">×</button></div><div class="collection-picker"><button class="collection-pick" onclick="chooseCollection(this)">Favorites</button><button class="collection-pick" onclick="chooseCollection(this)">To Read</button><button class="collection-pick" onclick="chooseCollection(this)">Thriller</button></div><button class="modal-cancel" onclick="createCollectionFromPicker()">＋ New collection</button></div></div>
+
+  <div class="overlay" id="textResult" onclick="overlayClick(event,'textResult')"><div class="modal" onclick="event.stopPropagation()"><div class="sheet-head" style="padding:0 0 9px"><b id="resultTitle">Definition</b><button class="close-btn" onclick="closeOverlay('textResult')">×</button></div><div id="resultBody" style="font:16px/1.5 Georgia,serif;padding:12px 2px"></div><button class="modal-cancel" onclick="closeOverlay('textResult')">Close</button></div></div>
+
+  <div class="toast" id="toast"></div>
+</div>
+<script>
+const screens=[...document.querySelectorAll('.screen')];
+const mainNav=document.getElementById('mainNav');
+let currentMain='libraryScreen', currentBook=null, currentNote=null, pressTimer=null, notePressTimer=null, selectedText='', savedRange=null, zoomValue=100, period='week', splitMode='Off';
+let pageTurnMethod='Tap + swipe', pageTurnEffect='Instant', currentPage=143, totalPages=188, currentFormat='PDF', swipeStartX=0, swipeStartY=0, lastSwipeAt=0;
+let pageDisplay='Single', cropMode='Auto', blankSpace=0, contrastValue=50;
+
+function showMain(id){
+  document.getElementById('app').classList.remove('reader-open');
+  currentMain=id;
+  screens.forEach(s=>s.classList.toggle('active',s.id===id));
+  mainNav.style.display=id==='collectionsScreen'?'none':'grid';
+  [...mainNav.querySelectorAll('.nav-btn')].forEach(b=>b.classList.toggle('active',b.dataset.target===id));
+  closeSheets();closeSelection();
+  if(id==='statsScreen')renderChart();
+}
+mainNav.addEventListener('click',e=>{const b=e.target.closest('.nav-btn');if(b)showMain(b.dataset.target)});
+
+document.getElementById('addBookBtn').onclick=()=>document.getElementById('fileInput').click();
+document.getElementById('fileInput').addEventListener('change',e=>{
+  const files=[...e.target.files]; if(!files.length)return;
+  files.forEach((file,i)=>addPrototypeBook(file,i));
+  toast(files.length+' file'+(files.length>1?'s':'')+' selected — existing import flow preserved');
+  e.target.value='';
+});
+function addPrototypeBook(file,i){
+  const name=file.name.replace(/\.[^.]+$/,''); const ext=(file.name.split('.').pop()||'file').toLowerCase();
+  const el=document.createElement('article'); el.className='book';el.dataset.title=name;el.dataset.author='Imported book';el.dataset.progress='0';el.dataset.format=ext;
+  el.innerHTML='<div class="cover c7"><span>'+escapeHtml(name.slice(0,36))+'</span><span class="badge">0%</span><span class="format">'+escapeHtml(ext)+'</span></div><h3>'+escapeHtml(name)+'</h3><p>Imported book</p>';
+  document.getElementById('bookGrid').appendChild(el); bindBook(el); updateCount();
+}
+function escapeHtml(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+
+function applyLibraryFilter(filter){
+  if(filter==='collections'){showMain('collectionsScreen');return;}
+  let count=0; document.querySelectorAll('#bookGrid .book').forEach(b=>{const p=+b.dataset.progress; const show=filter==='all'||(filter==='reading'&&p>0&&p<100)||(filter==='finished'&&p>=100); b.style.display=show?'block':'none';if(show)count++});
+  document.getElementById('gridTitle').textContent=filter==='all'?'All books':filter==='reading'?'Reading now':'Finished';document.getElementById('bookCount').textContent=count+' books';
+}
+document.getElementById('libraryChips').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;[...e.currentTarget.children].forEach(x=>x.classList.toggle('active',x===b));applyLibraryFilter(b.dataset.filter)});
+document.getElementById('searchInput').addEventListener('input',e=>{const q=e.target.value.toLowerCase();let count=0;document.querySelectorAll('#bookGrid .book').forEach(b=>{const ok=(b.dataset.title+' '+b.dataset.author).toLowerCase().includes(q);b.style.display=ok?'block':'none';if(ok)count++});document.getElementById('bookCount').textContent=count+' books'});
+function updateCount(){document.getElementById('bookCount').textContent=document.querySelectorAll('#bookGrid .book').length+' books'}
+
+function bindBook(book){
+  book.addEventListener('click',e=>{if(book.dataset.longPressed==='1'){book.dataset.longPressed='0';return;}openReader(book.dataset.title,(book.dataset.format||'book').toUpperCase())});
+  book.addEventListener('pointerdown',()=>{clearTimeout(pressTimer);pressTimer=setTimeout(()=>{book.dataset.longPressed='1';openBookOptions(book)},560)});
+  ['pointerup','pointerleave','pointercancel'].forEach(ev=>book.addEventListener(ev,()=>clearTimeout(pressTimer)));
+  book.addEventListener('contextmenu',e=>{e.preventDefault();openBookOptions(book)});
+}
+document.querySelectorAll('#bookGrid .book').forEach(bindBook);
+function openBookOptions(book){currentBook=book;document.getElementById('optTitle').textContent=book.dataset.title;document.getElementById('optAuthor').textContent=book.dataset.author;document.getElementById('optCover').textContent=book.dataset.title.split(' ').slice(0,2).join(' ').toUpperCase();showOverlay('bookOptions')}
+function openCollectionPicker(){closeOverlay('bookOptions');showOverlay('collectionPicker')}
+function chooseCollection(btn){btn.classList.toggle('active');toast((btn.classList.contains('active')?'Added to ':'Removed from ')+btn.textContent.trim())}
+function createCollection(){const name=prompt('Collection name','New collection');if(!name)return;const btn=document.createElement('button');btn.className='collection-card';btn.onclick=()=>openCollection(name);btn.innerHTML='<div class="collection-stack"><i class="stack-book"></i></div><b>'+escapeHtml(name)+'</b><span>0 books</span>';document.getElementById('collectionGrid').insertBefore(btn,document.querySelector('.create-card'));toast('Collection created')}
+function createCollectionFromPicker(){closeOverlay('collectionPicker');createCollection()}
+function openCollection(name){toast(name+' collection — same collection data model will be preserved')}
+function confirmDelete(){if(confirm('Delete this book from MyReader?')){if(currentBook)currentBook.remove();closeOverlay('bookOptions');updateCount();toast('Book deleted in prototype')} }
+
+function openReader(title,format){
+  document.getElementById('app').classList.add('reader-open');
+  document.getElementById('readerBookTitle').textContent=title||'The Quiet Edge';
+  currentFormat=(format||'PDF').toUpperCase(); currentPage=143; totalPages=188; updateReaderPageUi(); renderReaderContent(currentPage);
+  setSplitMode('Off',false);
+  screens.forEach(s=>s.classList.toggle('active',s.id==='readerScreen'));mainNav.style.display='none';document.getElementById('readerScreen').classList.remove('chrome-hidden');closeSheets();closeSelection();
+}
+function closeReader(){document.getElementById('app').classList.remove('reader-open');showMain(currentMain==='readerScreen'?'libraryScreen':currentMain)}
+function closeSheets(){document.querySelectorAll('.sheet').forEach(s=>s.classList.remove('open'))}
+function openFormat(){const s=document.getElementById('formatSheet');const was=s.classList.contains('open');closeSheets();document.getElementById('readerScreen').classList.remove('chrome-hidden');if(!was)s.classList.add('open')}
+function openToolSheet(name){
+  closeSheets();document.getElementById('readerScreen').classList.remove('chrome-hidden');document.getElementById('genericTitle').textContent=name;
+  const body=document.getElementById('genericBody');
+  const map={
+    'Contents':'<div class="panel" style="margin:0"><button class="row row-btn"><div class="row-copy"><b>Chapter Six</b><span>The room after midnight</span></div><div class="row-value">143</div></button><button class="row row-btn"><div class="row-copy"><b>Chapter Seven</b><span>A message in the margin</span></div><div class="row-value">158</div></button></div>',
+    'Progress':'<div class="insight"><b>'+Math.round(currentPage/totalPages*100)+'% completed</b>Page '+currentPage+' of '+totalPages+' · about '+Math.max(0,Math.round((totalPages-currentPage)*0.84))+' minutes left.</div><div class="format-row"><div class="format-label">Reading progress</div><div class="progress-track" style="height:8px"><i style="width:'+Math.round(currentPage/totalPages*100)+'%"></i></div></div>',
+    'Contrast':'<div class="format-row"><div class="format-label">PDF contrast</div><input class="range" type="range" min="0" max="100" value="'+contrastValue+'" oninput="setContrast(this.value)"><div class="format-note">Current: <b id="contrastVal">'+contrastValue+'</b> · changes the preview immediately.</div></div>',
+    'Navigate':'<div class="format-row"><div class="format-label">Go to page</div><div class="go-page-wrap"><button class="zoom-btn" onclick="stepPageInput(-1)">−</button><div class="go-page-center"><input id="goPageInput" class="page-input" type="number" min="1" max="'+totalPages+'" value="'+currentPage+'" inputmode="numeric" onkeydown="if(event.key===\'Enter\')goToPageFromInput()"><b>/ '+totalPages+'</b></div><button class="zoom-btn" onclick="stepPageInput(1)">＋</button></div><button class="go-btn" onclick="goToPageFromInput()">Go to page</button><div class="format-note">Type any page number, or use − / + for one-page steps.</div></div>',
+    'Split view':'<div class="option-grid"><button class="square-opt '+(splitMode==='Off'?'active':'')+'" onclick="setSplitMode(\'Off\')">Off</button><button class="square-opt '+(splitMode==='Vertical'?'active':'')+'" onclick="setSplitMode(\'Vertical\')">Vertical</button><button class="square-opt '+(splitMode==='Horizontal'?'active':'')+'" onclick="setSplitMode(\'Horizontal\')">Horizontal</button><button class="square-opt '+(splitMode==='Reference'?'active':'')+'" onclick="setSplitMode(\'Reference\')">Reference</button></div><div class="format-note">Vertical shows two pages side-by-side; Horizontal stacks them; Reference keeps the book beside notes/reference material.</div>'
+  };body.innerHTML=map[name]||'<div class="empty">Preview</div>';document.getElementById('genericSheet').classList.add('open');
+}
+function stepPageInput(delta){const input=document.getElementById('goPageInput');if(!input)return;input.value=Math.max(1,Math.min(totalPages,(parseInt(input.value)||currentPage)+delta))}
+function goToPageFromInput(){const input=document.getElementById('goPageInput');if(!input)return;const target=Math.max(1,Math.min(totalPages,parseInt(input.value)||currentPage));const dir=target>=currentPage?1:-1;turnPageTo(target,dir);closeSheets()}
+function setSplitMode(mode,announce=true){
+  splitMode=mode;const screen=document.getElementById('readerScreen');screen.classList.remove('split-vertical','split-horizontal','split-reference');
+  if(mode==='Vertical')screen.classList.add('split-vertical');if(mode==='Horizontal')screen.classList.add('split-horizontal');if(mode==='Reference')screen.classList.add('split-reference');
+  renderSplitSecondary();if(announce){closeSheets();toast('Split view: '+mode)}
+}
+function renderSplitSecondary(){
+  const p=document.getElementById('splitSecondary');if(!p)return;
+  if(splitMode==='Reference'){
+    p.innerHTML='<div class="split-label">Reference</div><div class="ref-card"><b>Highlight · page '+currentPage+'</b><span>There was a meaning she had missed.</span></div><div class="ref-card"><b>Note</b><span>Review the margin clue later.</span></div><div class="ref-card"><b>Dictionary</b><span><i>margin</i> — batas; tepi halaman.</span></div>';
+  }else{
+    const secondary=Math.min(totalPages,currentPage+1);p.innerHTML='<div class="split-label">Page '+secondary+'</div><h3>A message in the margin</h3><p>The next page stays visible while you compare details across the spread.</p><p>Use this for PDFs, references, or pages that need side-by-side reading.</p>';
+  }
+}
+function zoom(delta){
+  zoomValue=Math.max(70,Math.min(180,zoomValue+delta));
+  document.getElementById('zoomValue').textContent=zoomValue+'%';
+  applyFormatPreview(); toast('PDF zoom '+zoomValue+'%');
+}
+function pickPageDisplay(btn){
+  document.querySelectorAll('#displayOptions .square-opt').forEach(x=>x.classList.remove('active'));
+  btn.classList.add('active'); pageDisplay=btn.innerText.trim();
+  renderReaderContent(currentPage); applyFormatPreview(); toast('Page display: '+pageDisplay);
+}
+function pickCrop(btn){
+  document.querySelectorAll('#cropOptions .square-opt').forEach(x=>x.classList.remove('active'));btn.classList.add('active');
+  const label=btn.dataset.label; cropMode=btn.querySelector('span:last-child').textContent.trim();
+  document.getElementById('cropNote').innerHTML='<b>Selected:</b> '+label+'. Preview applied to this page.';
+  applyFormatPreview(); toast(label);
+}
+function setBlankSpace(v){blankSpace=parseInt(v)||0;document.getElementById('blankVal').textContent=blankSpace;applyFormatPreview()}
+function setContrast(v){contrastValue=parseInt(v)||50;const el=document.getElementById('contrastVal');if(el)el.textContent=contrastValue;applyFormatPreview()}
+function applyFormatPreview(){
+  const body=document.getElementById('readerBody'); if(!body)return;
+  body.style.setProperty('--readerZoom',(zoomValue/100).toFixed(2));
+  body.style.setProperty('--blankSpace',(blankSpace*3)+'px');
+  body.style.setProperty('--previewContrast',(0.65 + contrastValue/100*0.7).toFixed(2));
+  body.dataset.crop=cropMode.toLowerCase().replace(/[^a-z]/g,'');
+  body.dataset.display=pageDisplay.toLowerCase().replace(/[^a-z]/g,'');
+}
+
+const readerBody=document.getElementById('readerBody');
+readerBody.addEventListener('click',e=>{
+  if(Date.now()-lastSwipeAt<350)return;
+  if(window.getSelection().toString().trim())return;
+  if(document.querySelector('.sheet.open')){closeSheets();return;}
+  if(document.getElementById('selectionPop').classList.contains('show')){closeSelection();return;}
+  const rect=readerBody.getBoundingClientRect(), ratio=(e.clientX-rect.left)/rect.width;
+  if(pageTurnMethod.includes('Tap') && ratio<.30){turnPage(-1);return;}
+  if(pageTurnMethod.includes('Tap') && ratio>.70){turnPage(1);return;}
+  document.getElementById('readerScreen').classList.toggle('chrome-hidden');
+});
+readerBody.addEventListener('touchstart',e=>{const t=e.changedTouches[0];swipeStartX=t.clientX;swipeStartY=t.clientY},{passive:true});
+readerBody.addEventListener('touchend',e=>{
+  const t=e.changedTouches[0],dx=t.clientX-swipeStartX,dy=t.clientY-swipeStartY;
+  if(pageTurnMethod.includes('Swipe') && Math.abs(dx)>55 && Math.abs(dx)>Math.abs(dy)*1.25 && !window.getSelection().toString().trim()){
+    lastSwipeAt=Date.now(); turnPage(dx<0?1:-1); return;
+  }
+  setTimeout(captureSelection,180);
+},{passive:true});
+function positionSelectionPop(){
+  const pop=document.getElementById('selectionPop'),sel=window.getSelection();
+  if(!pop||!sel||!sel.rangeCount)return;
+  const range=sel.getRangeAt(0), rects=range.getClientRects(), r=rects.length?rects[0]:range.getBoundingClientRect();
+  pop.classList.add('show');
+  requestAnimationFrame(()=>{
+    const w=pop.offsetWidth,h=pop.offsetHeight;
+    let left=r.left+r.width/2-w/2; left=Math.max(8,Math.min(window.innerWidth-w-8,left));
+    let top=r.top-h-8; if(top<32) top=Math.min(window.innerHeight-h-8,r.bottom+8);
+    pop.style.left=left+'px'; pop.style.top=top+'px';
+  });
+}
+function captureSelection(){const sel=window.getSelection();const text=sel.toString().trim();if(!text||!document.getElementById('readerBody').contains(sel.anchorNode)){return;} selectedText=text.slice(0,180); if(sel.rangeCount)savedRange=sel.getRangeAt(0).cloneRange();document.getElementById('readerScreen').classList.remove('chrome-hidden');closeSheets();positionSelectionPop()}
+readerBody.addEventListener('mouseup',()=>setTimeout(captureSelection,0));
+function restoreSelection(){if(!savedRange)return false;const sel=window.getSelection();sel.removeAllRanges();sel.addRange(savedRange);return true}
+function applyHighlight(){if(restoreSelection()){try{document.execCommand('hiliteColor',false,'#e6df9f')}catch(e){}} addNoteCard('Highlight',selectedText);closeSelection();toast('Highlight added — same feature kept')}
+function applyUnderline(){if(restoreSelection()){try{document.execCommand('underline',false,null)}catch(e){}} addNoteCard('Underline',selectedText);closeSelection();toast('Underline added — same feature kept')}
+function saveNote(){const note=prompt('Add note','');if(note===null)return;addNoteCard('Note'+(note?' · '+note:''),selectedText);closeSelection();toast('Note saved')}
+function addNoteCard(type,text){const a=document.createElement('article');a.className='note-card';a.dataset.type=type.toLowerCase().startsWith('highlight')?'highlight':type.toLowerCase().startsWith('underline')?'underline':'note';a.dataset.book=document.getElementById('readerBookTitle').textContent;a.dataset.format=currentFormat;a.dataset.page=currentPage;a.innerHTML='<div class="note-book">'+escapeHtml(document.getElementById('readerBookTitle').textContent)+' · page '+currentPage+'</div><blockquote>'+escapeHtml(text)+'</blockquote><div class="note-meta"><span>'+escapeHtml(type)+'</span><span>Page '+currentPage+'</span></div>';document.getElementById('notesList').prepend(a);bindNote(a);applyNotesFilter(document.querySelector('#notesChips .chip.active')?.dataset.noteFilter||'all')}
+function bindNote(note){
+  let longPressed=false;
+  note.addEventListener('pointerdown',()=>{
+    longPressed=false; clearTimeout(notePressTimer);
+    notePressTimer=setTimeout(()=>{longPressed=true;currentNote=note;showOverlay('noteOptions')},560);
+  });
+  ['pointerup','pointerleave','pointercancel'].forEach(ev=>note.addEventListener(ev,()=>clearTimeout(notePressTimer)));
+  note.addEventListener('click',e=>{
+    if(longPressed){e.preventDefault();longPressed=false;return;}
+    openNoteLocation(note);
+  });
+  note.addEventListener('contextmenu',e=>{e.preventDefault();currentNote=note;showOverlay('noteOptions')});
+}
+document.querySelectorAll('.note-card').forEach(bindNote);
+function applyNotesFilter(filter){
+  document.querySelectorAll('#notesList .note-card').forEach(n=>{n.style.display=(filter==='all'||n.dataset.type===filter)?'block':'none'});
+}
+document.getElementById('notesChips').addEventListener('click',e=>{
+  const b=e.target.closest('.chip'); if(!b)return;
+  document.querySelectorAll('#notesChips .chip').forEach(x=>x.classList.toggle('active',x===b));
+  applyNotesFilter(b.dataset.noteFilter);
+});
+function openNoteLocation(note){
+  const book=note.dataset.book||'The Quiet Edge', format=note.dataset.format||'PDF', page=Math.max(1,parseInt(note.dataset.page||'143'));
+  openReader(book,format); currentPage=Math.min(totalPages,page); renderReaderContent(currentPage); updateReaderPageUi(); toast('Opened page '+currentPage);
+}
+function deleteCurrentNote(){if(!currentNote)return;currentNote.remove();currentNote=null;closeOverlay('noteOptions');toast('Note deleted')}
+
+function defineText(){showTextResult('Definition','<b>'+escapeHtml(selectedText)+'</b><br><br>Prototype definition panel. The APK update will keep the existing dictionary/definition path rather than replacing it.');closeSelection()}
+function translateText(){showTextResult('English → Indonesian','<b>'+escapeHtml(selectedText)+'</b><br><br>Contoh hasil terjemahan Indonesia akan muncul di sini. Integrasi translate akan ditambahkan tanpa mengubah highlight/underline/note.');closeSelection()}
+function copySelected(){navigator.clipboard?.writeText(selectedText);closeSelection();toast('Copied')}
+function closeSelection(){document.getElementById('selectionPop').classList.remove('show');try{window.getSelection().removeAllRanges()}catch(e){}}
+function showTextResult(title,html){document.getElementById('resultTitle').textContent=title;document.getElementById('resultBody').innerHTML=html;showOverlay('textResult')}
+
+const weekData=[38,0,64,0,28,31,10], monthData=[38,0,0,64,0,0,28,31,0,0,0,0,0,0,0,0,0,0,0,10,0,0,0,0,0,0,0,0,0,0,0];
+document.getElementById('periodSwitch').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;period=b.dataset.period;[...e.currentTarget.children].forEach(x=>x.classList.toggle('active',x===b));document.getElementById('periodLabel').textContent=period==='week'?'Oct 19 – 25, 2026':'October 2026';renderChart()});
+function renderChart(){const data=period==='week'?weekData:monthData,max=Math.max(...data,75),chart=document.getElementById('chart');chart.innerHTML='';data.forEach((m,i)=>{const c=document.createElement('div');c.className='bar-col';c.innerHTML='<div class="bar" style="height:'+(m/max*94)+'%"></div><label>'+(period==='week'?['M','T','W','T','F','S','S'][i]:(i%5===0?i+1:''))+'</label>';chart.appendChild(c)});if(period==='week'){document.getElementById('totalLabel').textContent='2h 51m total';document.getElementById('avgLabel').textContent='24m/day avg';document.getElementById('insightTitle').textContent='Best reading day: Tuesday';document.getElementById('insightText').textContent='You read 1h 04m. Four active reading days this week.'}else{document.getElementById('totalLabel').textContent='4h 30m total';document.getElementById('avgLabel').textContent='9m/day avg';document.getElementById('insightTitle').textContent='11 reading sessions this month';document.getElementById('insightText').textContent='Longest session: 1h 04m. Six books were finished this month.'}}
+function shiftPeriod(dir){toast(dir<0?'Previous period':'Next period')}
+
+function readerPageHtml(page){
+  const variants=[
+    ['The room after midnight','The library had gone quiet enough that every page turn seemed louder than it should. Mira looked again at the note she had copied earlier, certain there was a meaning she had missed.','She read the paragraph twice, then moved closer to the window. The margin around the scanned page was wide and uneven, stealing more space than the text itself.'],
+    ['A message in the margin','A thin pencil mark appeared beside the final paragraph, almost hidden by the shadow of the binding.','Mira compared it with the previous page and realized the two marks formed a direction rather than a correction.'],
+    ['The second clue','The next page carried only a date and a room number, written smaller than the printed text.','She underlined it once, added a note, and kept reading before the thought could disappear.'],
+    ['Quiet evidence','Nothing on the page looked dramatic, but the repeated phrase changed its meaning when read beside the earlier chapter.','She flipped back one page, then forward again, checking the wording against her note.']
+  ];
+  const v=variants[Math.abs(page-143)%variants.length];
+  return '<h1>'+v[0]+'</h1><p>'+v[1]+'</p><p>'+v[2]+'</p><p>On a small screen, a clean layout and predictable page turn make long reading sessions easier.</p><p>Select text here to preview Definition, Translate, Highlight, Underline, and Note.</p>';
+}
+function renderReaderContent(page){
+  const body=document.getElementById('readerBody');
+  const next=Math.min(totalPages,page+1);
+  if(pageDisplay==='Continuous'){
+    body.innerHTML='<section class="preview-page">'+readerPageHtml(page)+'</section><div class="continuous-divider">Page '+next+'</div><section class="preview-page">'+readerPageHtml(next)+'</section>';
+  }else if(pageDisplay==='Facing'){
+    body.innerHTML='<div class="facing-pages"><section class="preview-page"><div class="page-number">'+page+'</div>'+readerPageHtml(page)+'</section><section class="preview-page"><div class="page-number">'+next+'</div>'+readerPageHtml(next)+'</section></div>';
+  }else if(pageDisplay==='Horizontal'){
+    body.innerHTML='<div class="horizontal-pages"><section class="preview-page"><div class="page-number">'+page+'</div>'+readerPageHtml(page)+'</section><section class="preview-page"><div class="page-number">'+next+'</div>'+readerPageHtml(next)+'</section></div>';
+  }else{
+    body.innerHTML='<section class="preview-page">'+readerPageHtml(page)+'</section>';
+  }
+  applyFormatPreview(); renderSplitSecondary();
+}
+function turnPageTo(target,dir){
+  target=Math.max(1,Math.min(totalPages,target));if(target===currentPage){updateReaderPageUi();return;}
+  const body=document.getElementById('readerBody'),layer=document.getElementById('pageTurnLayer');
+  const oldHtml=body.innerHTML,effect=pageTurnEffect;
+  body.classList.remove('new-slide-next','new-slide-prev','new-book-next','new-book-prev');
+  if(effect!=='Instant'){
+    layer.innerHTML=oldHtml;layer.className='page-turn-layer show '+(effect==='Slide'?(dir>0?'slide-next':'slide-prev'):(dir>0?'book-next':'book-prev'));
+  }
+  currentPage=target;renderReaderContent(currentPage);updateReaderPageUi();
+  if(effect==='Slide')body.classList.add(dir>0?'new-slide-next':'new-slide-prev');
+  if(effect==='Book flip')body.classList.add(dir>0?'new-book-next':'new-book-prev');
+  clearTimeout(window.__turnLayer);window.__turnLayer=setTimeout(()=>{layer.className='page-turn-layer';layer.innerHTML='';body.classList.remove('new-slide-next','new-slide-prev','new-book-next','new-book-prev')},650);
+  const hint=document.getElementById('tapHint');hint.textContent='Page '+currentPage;hint.classList.add('show');clearTimeout(window.__pageHint);window.__pageHint=setTimeout(()=>hint.classList.remove('show'),650);
+}
+
+function updateReaderPageUi(){
+  document.getElementById('readerMeta').textContent=currentFormat+' · page '+currentPage+' of '+totalPages;
+  const pct=Math.max(1,Math.min(100,Math.round(currentPage/totalPages*100)));
+  document.getElementById('readerPct').textContent=pct+'%';
+  document.getElementById('readerBar').style.width=pct+'%';
+  const left=Math.max(0,Math.round((totalPages-currentPage)*0.84));
+  document.getElementById('readerLeft').textContent=left?left+'m left':'Finished';
+}
+function turnPage(dir){
+  const next=Math.max(1,Math.min(totalPages,currentPage+dir));
+  if(next===currentPage){toast(dir<0?'First page':'Last page');return;}
+  turnPageTo(next,dir);
+}
+function cyclePageTurnMethod(){
+  const values=['Tap + swipe','Tap only','Swipe only'];
+  pageTurnMethod=values[(values.indexOf(pageTurnMethod)+1)%values.length];
+  document.getElementById('pageTurnMethodValue').textContent=pageTurnMethod;
+  toast('Page turn: '+pageTurnMethod);
+}
+function cyclePageTurnEffect(){
+  const values=['Instant','Slide','Book flip'];
+  pageTurnEffect=values[(values.indexOf(pageTurnEffect)+1)%values.length];
+  document.getElementById('pageTurnEffectValue').textContent=pageTurnEffect;
+  toast('Page effect: '+pageTurnEffect);
+}
+function updateStatusTime(){
+  const d=new Date(),h=String(d.getHours()).padStart(2,'0'),m=String(d.getMinutes()).padStart(2,'0');const value=h+':'+m;const el=document.getElementById('statusTime'),rel=document.getElementById('readerTime');if(el)el.textContent=value;if(rel)rel.textContent=value;
+}
+updateStatusTime();setInterval(updateStatusTime,30000);
+if(navigator.getBattery){navigator.getBattery().then(b=>{const sync=()=>{const p=Math.round(b.level*100);const bp=document.getElementById('batteryPct'),bf=document.getElementById('batteryFill'),rbp=document.getElementById('readerBatteryPct'),rbf=document.getElementById('readerBatteryFill');if(bp)bp.textContent=p+'%';if(bf)bf.style.width=p+'%';if(rbp)rbp.textContent=p+'%';if(rbf)rbf.style.width=p+'%'};sync();b.addEventListener('levelchange',sync)}).catch(()=>{});}
+
+function cycleValue(id,values){const el=document.getElementById(id),i=values.indexOf(el.textContent.trim());el.textContent=values[(i+1)%values.length];toast(el.textContent)}
+function toggleSwitch(btn,label){btn.classList.toggle('on');toast(label+': '+(btn.classList.contains('on')?'On':'Off'))}
+function toggleDrive(){const v=document.getElementById('driveValue'),s=document.getElementById('driveSub');if(v.textContent==='Connected'){v.textContent='Not connected';s.textContent='Tap to choose a Google Drive folder'}else{v.textContent='Connected';s.textContent='MyReader Sync folder selected'}toast('Drive folder: '+v.textContent)}
+function showOverlay(id){document.getElementById(id).classList.add('show')}
+function closeOverlay(id){document.getElementById(id).classList.remove('show')}
+function overlayClick(e,id){if(e.target.id===id)closeOverlay(id)}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(window.__toast);window.__toast=setTimeout(()=>t.classList.remove('show'),1500)}
+
+renderReaderContent(currentPage);
+renderChart();
+</script>
+<script>
+// v5: turn each main page into a fixed header + independently scrolling body.
+(function(){
+  document.querySelectorAll('.screen:not(.reader-screen)').forEach(function(screen){
+    if(screen.querySelector(':scope > .screen-scroll')) return;
+    var header=screen.querySelector(':scope > .topbar');
+    if(!header) return;
+    var scroller=document.createElement('div');
+    scroller.className='screen-scroll';
+    var nodes=[];
+    Array.prototype.forEach.call(screen.childNodes,function(n){ if(n!==header) nodes.push(n); });
+    nodes.forEach(function(n){ scroller.appendChild(n); });
+    screen.appendChild(scroller);
+  });
+})();
+</script>
+</body>
+</html>
